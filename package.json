@@ -1,0 +1,16 @@
+{
+  "name": "legion",
+  "version": "0.1.0",
+  "description": "Minimal agent orchestrator for coding tasks",
+  "type": "module",
+  "bin": {
+    "legion": "./bin/legion.js",
+    "tool": "./bin/legion.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
