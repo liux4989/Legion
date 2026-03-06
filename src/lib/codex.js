@@ -3,7 +3,6 @@ import os from "node:os";
 import path from "node:path";
 import { runCommand, runCommandStreaming } from "./shell.js";
 import { CliError } from "./errors.js";
-import { buildSpecPrompt, normalizeGeneratedSpec } from "./spec.js";
 
 function tmpFile(prefix, extension) {
   return path.join(os.tmpdir(), `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}.${extension}`);
@@ -131,44 +130,6 @@ export async function runCodexTask({ repoRoot, prompt, resumeSessionId = null, o
     summary: readLastMessage(lastMessageFile),
     rawOutput: result.stdout,
   };
-}
-
-export function generateSpecWithCodex({ repoRoot, intent, taskId, notes = "" }) {
-  const lastMessageFile = tmpFile("legion-spec", "md");
-  const result = runCommand("codex", ["exec", ...buildCommonArgs(lastMessageFile), "-"], {
-    cwd: repoRoot,
-    input: buildSpecPrompt(intent, taskId, notes),
-    allowFailure: true,
-  });
-  const events = parseJsonLines(result.stdout);
-  const rawSpec = readLastMessage(lastMessageFile);
-
-  if (result.status !== 0) {
-    const message = rawSpec || result.stderr.trim() || "Codex spec generation failed";
-    return {
-      ok: false,
-      sessionId: extractThreadId(events),
-      error: message,
-      rawOutput: result.stdout,
-    };
-  }
-
-  try {
-    return {
-      ok: true,
-      sessionId: extractThreadId(events),
-      spec: normalizeGeneratedSpec(rawSpec, { intent, taskId, notes }),
-      rawOutput: result.stdout,
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      sessionId: extractThreadId(events),
-      error: `Codex returned an invalid task spec: ${error.message}`,
-      rawOutput: result.stdout,
-      cause: error,
-    };
-  }
 }
 
 export async function reviewWithCodex({ repoRoot, baseBranch, prompt, onEvent = null }) {
