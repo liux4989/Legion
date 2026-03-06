@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { runCommand, runCommandStreaming } from "./shell.js";
+import { runCommand, runCommandInteractive, runCommandStreaming } from "./shell.js";
 import { CliError } from "./errors.js";
 
 function tmpFile(prefix, extension) {
@@ -97,38 +97,30 @@ function buildCommonArgs(lastMessageFile) {
   return ["--json", "--full-auto", "--output-last-message", lastMessageFile, ...extraArgs];
 }
 
-export async function runCodexTask({ repoRoot, prompt, resumeSessionId = null, onEvent = null }) {
-  const lastMessageFile = tmpFile("legion-run-summary", "md");
-  const commandArgs = resumeSessionId
-    ? ["exec", "resume", ...buildCommonArgs(lastMessageFile), resumeSessionId, "-"]
-    : ["exec", ...buildCommonArgs(lastMessageFile), "-"];
+function buildInteractiveArgs(prompt) {
+  const extraArgs = process.env.LEGION_CODEX_ARGS?.trim()
+    ? process.env.LEGION_CODEX_ARGS.trim().split(/\s+/)
+    : [];
 
-  const streamState = { buffer: "", events: [] };
-  const result = await runCommandStreaming("codex", commandArgs, {
+  return ["--no-alt-screen", ...extraArgs, prompt];
+}
+
+export async function runCodexTask({ repoRoot, prompt }) {
+  const result = runCommandInteractive("codex", buildInteractiveArgs(prompt), {
     cwd: repoRoot,
-    input: prompt,
     allowFailure: true,
-    onStdout: (chunk) => parseStreamingJsonLines(chunk, streamState, onEvent),
   });
-  flushStreamingJsonLines(streamState, onEvent);
-  const events = streamState.events.length > 0 ? streamState.events : parseJsonLines(result.stdout);
 
   if (result.status !== 0) {
-    const message = readLastMessage(lastMessageFile) || result.stderr.trim() || "Codex execution failed";
     return {
       ok: false,
-      sessionId: extractThreadId(events) ?? resumeSessionId,
-      summary: message,
-      rawOutput: result.stdout,
-      error: message,
+      error: `Codex exited with code ${result.status}`,
     };
   }
 
   return {
     ok: true,
-    sessionId: extractThreadId(events) ?? resumeSessionId,
-    summary: readLastMessage(lastMessageFile),
-    rawOutput: result.stdout,
+    summary: "Completed via inline Codex session. Review the working tree for implementation details.",
   };
 }
 

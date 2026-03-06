@@ -25,7 +25,6 @@ export async function createTask(args) {
     branchName,
     createdAt: now,
     updatedAt: now,
-    agentSessionId: null,
     latestRunSummary: null,
     latestReviewSummary: null,
     latestReviewFeedback: null,

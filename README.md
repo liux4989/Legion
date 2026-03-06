@@ -61,7 +61,8 @@ tasks/
 
 ## Notes
 
-- `run` resumes the last executor session if the task is already in `executing` state and has a stored Codex session id.
+- `run` launches an inline visible `codex` session and waits for it to exit.
+- `run` is a one-shot invocation. If review fails and the task returns to `executing`, running it again starts a fresh Codex session.
 - `review` uses `codex exec review` with prompt-constrained JSON output plus local validation.
 - `review` returns failed findings back to `run` as fix instructions.
 - `pr` creates a commit if the task branch still has local changes, then pushes and creates or updates a PR with `gh`.
