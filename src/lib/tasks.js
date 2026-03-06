@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { ensureDir, exists, readJson, readText, writeJson, writeText } from "./fs.js";
 import { CliError } from "./errors.js";
@@ -16,15 +17,8 @@ export function tasksRoot(repoRoot) {
   return path.join(repoRoot, "tasks");
 }
 
-export function makeTaskId(intent) {
-  const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
-  const slug = intent
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 32) || "task";
-
-  return `${stamp}-${slug}`;
+export function makeTaskId() {
+  return randomUUID();
 }
 
 export function taskDir(repoRoot, taskId) {

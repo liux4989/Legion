@@ -13,8 +13,8 @@ test("buildSpec includes required sections", () => {
   assert.match(spec, /## Optional Notes/);
 });
 
-test("makeTaskId produces a timestamped slug", () => {
+test("makeTaskId produces a uuid", () => {
   const taskId = makeTaskId("Add retry handling to webhook delivery failures");
 
-  assert.match(taskId, /^\d{14}-add-retry-handling-to-webhook-d/);
+  assert.match(taskId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
 });
