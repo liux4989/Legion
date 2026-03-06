@@ -61,10 +61,10 @@ tasks/
 
 ## Notes
 
-- `create` uses Codex to expand the user intent into a short task spec stored in `task.json`.
+- `create` launches an inline visible `codex` session to expand the user intent into a short task spec stored in `task.json`.
 - `run` launches an inline visible `codex` session and waits for it to exit.
 - `run` is a one-shot invocation. If review fails and the task returns to `executing`, running it again starts a fresh Codex session.
-- `review` uses `codex exec review` with prompt-constrained JSON output plus local validation.
+- `review` launches an inline visible `codex` session and reads back a JSON review result from a temp file.
 - `review` returns failed findings back to `run` as fix instructions.
 - `pr` creates a commit if the task branch still has local changes, then pushes and creates or updates a PR with `gh`.
 - The task spec is stored in `task.json` and inlined into the PR body so reviewers can see the full scope.

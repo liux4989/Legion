@@ -45,6 +45,8 @@ function validateReviewShape(review) {
 function buildReviewPrompt(task, spec) {
   return `Review task ${task.id} against the spec below.
 
+Use git to compare the current branch against base branch ${task.baseBranch}.
+
 Only check:
 - correctness
 - regressions
@@ -84,33 +86,15 @@ export async function reviewTask(args) {
     throw new CliError(`Task ${task.id} has no diff against ${task.baseBranch}. Run the task before review.`);
   }
 
-  let loggedProgress = false;
   const result = await reviewWithCodex({
     repoRoot: root,
-    baseBranch: task.baseBranch,
     prompt: buildReviewPrompt(task, task.spec),
-    onEvent: (event) => {
-      if (event.type === "thread.started") {
-        console.log(`Codex review session: ${event.thread_id}`);
-        loggedProgress = true;
-        return;
-      }
-
-      if (event.type === "turn.started") {
-        console.log("Codex started review...");
-        loggedProgress = true;
-      }
-    },
   });
 
   if (!result.ok) {
     recordError(root, task, result.error);
     console.error(result.error);
     return;
-  }
-
-  if (!loggedProgress) {
-    console.log("Codex review completed without streaming progress events.");
   }
 
   let review;
