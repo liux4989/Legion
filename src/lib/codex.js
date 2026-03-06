@@ -1,181 +1,137 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { runCommand, runCommandStreaming } from "./shell.js";
-import { CliError } from "./errors.js";
+import { runCommandInteractive } from "./shell.js";
 
 function tmpFile(prefix, extension) {
   return path.join(os.tmpdir(), `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}.${extension}`);
 }
 
-function parseJsonLines(stdout) {
-  const events = [];
-
-  for (const line of stdout.split("\n")) {
-    if (!line.trim()) {
-      continue;
-    }
-
-    try {
-      events.push(JSON.parse(line));
-    } catch (error) {
-      throw new CliError(`Unable to parse Codex JSON output: ${line}`, { cause: error });
-    }
-  }
-
-  return events;
+function readJsonFile(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-function parseStreamingJsonLines(chunk, state, onEvent) {
-  state.buffer += chunk;
-
-  while (true) {
-    const newlineIndex = state.buffer.indexOf("\n");
-
-    if (newlineIndex === -1) {
-      break;
-    }
-
-    const line = state.buffer.slice(0, newlineIndex).trim();
-    state.buffer = state.buffer.slice(newlineIndex + 1);
-
-    if (!line) {
-      continue;
-    }
-
-    let event;
-
-    try {
-      event = JSON.parse(line);
-    } catch (error) {
-      throw new CliError(`Unable to parse Codex JSON output: ${line}`, { cause: error });
-    }
-
-    state.events.push(event);
-    onEvent?.(event);
-  }
-}
-
-function flushStreamingJsonLines(state, onEvent) {
-  const line = state.buffer.trim();
-
-  if (!line) {
-    state.buffer = "";
-    return;
-  }
-
-  let event;
-
-  try {
-    event = JSON.parse(line);
-  } catch (error) {
-    throw new CliError(`Unable to parse Codex JSON output: ${line}`, { cause: error });
-  }
-
-  state.events.push(event);
-  state.buffer = "";
-  onEvent?.(event);
-}
-
-function extractThreadId(events) {
-  return events.find((event) => event.type === "thread.started")?.thread_id ?? null;
-}
-
-function readLastMessage(filePath) {
-  if (!fs.existsSync(filePath)) {
-    return "";
-  }
-
-  return fs.readFileSync(filePath, "utf8").trim();
-}
-
-function buildCommonArgs(lastMessageFile) {
+function buildInteractiveArgs(prompt) {
   const extraArgs = process.env.LEGION_CODEX_ARGS?.trim()
     ? process.env.LEGION_CODEX_ARGS.trim().split(/\s+/)
     : [];
 
-  return ["--json", "--full-auto", "--output-last-message", lastMessageFile, ...extraArgs];
+  return ["--no-alt-screen", ...extraArgs, prompt];
 }
 
-export async function runCodexTask({ repoRoot, prompt, resumeSessionId = null, onEvent = null }) {
-  const lastMessageFile = tmpFile("legion-run-summary", "md");
-  const commandArgs = resumeSessionId
-    ? ["exec", "resume", ...buildCommonArgs(lastMessageFile), resumeSessionId, "-"]
-    : ["exec", ...buildCommonArgs(lastMessageFile), "-"];
+function appendJsonFileInstructions(prompt, outputFile) {
+  return `${prompt}
 
-  const streamState = { buffer: "", events: [] };
-  const result = await runCommandStreaming("codex", commandArgs, {
+Before you finish, write the final result as raw JSON to this absolute path:
+${outputFile}
+
+Rules for that file:
+- The file must contain JSON only.
+- Do not wrap the JSON in markdown.
+- Ensure the file exists before you exit.`;
+}
+
+function runInlineCodex(repoRoot, prompt) {
+  const result = runCommandInteractive("codex", buildInteractiveArgs(prompt), {
     cwd: repoRoot,
-    input: prompt,
     allowFailure: true,
-    onStdout: (chunk) => parseStreamingJsonLines(chunk, streamState, onEvent),
   });
-  flushStreamingJsonLines(streamState, onEvent);
-  const events = streamState.events.length > 0 ? streamState.events : parseJsonLines(result.stdout);
 
   if (result.status !== 0) {
-    const message = readLastMessage(lastMessageFile) || result.stderr.trim() || "Codex execution failed";
     return {
       ok: false,
-      sessionId: extractThreadId(events) ?? resumeSessionId,
-      summary: message,
-      rawOutput: result.stdout,
-      error: message,
+      error: `Codex exited with code ${result.status}`,
     };
+  }
+
+  return { ok: true };
+}
+
+export async function generateObjectWithCodex({ repoRoot, prompt, schema, prefix = "legion" }) {
+  const outputFile = tmpFile(prefix, "json");
+  const inlinePrompt = appendJsonFileInstructions(
+    `${prompt}
+
+JSON schema:
+${JSON.stringify(schema, null, 2)}`,
+    outputFile,
+  );
+
+  try {
+    const result = runInlineCodex(repoRoot, inlinePrompt);
+
+    if (!result.ok) {
+      return result;
+    }
+
+    if (!fs.existsSync(outputFile)) {
+      return {
+        ok: false,
+        error: `Codex did not write the expected JSON output file: ${outputFile}`,
+      };
+    }
+
+    try {
+      return {
+        ok: true,
+        value: readJsonFile(outputFile),
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: `Codex output was not valid JSON in ${outputFile}`,
+        cause: error,
+      };
+    }
+  } finally {
+    fs.rmSync(outputFile, { force: true });
+  }
+}
+
+export async function runCodexTask({ repoRoot, prompt }) {
+  const result = runInlineCodex(repoRoot, prompt);
+
+  if (!result.ok) {
+    return result;
   }
 
   return {
     ok: true,
-    sessionId: extractThreadId(events) ?? resumeSessionId,
-    summary: readLastMessage(lastMessageFile),
-    rawOutput: result.stdout,
+    summary: "Completed via inline Codex session. Review the working tree for implementation details.",
   };
 }
 
-export async function reviewWithCodex({ repoRoot, baseBranch, prompt, onEvent = null }) {
-  const lastMessageFile = tmpFile("legion-review", "json");
-
-  const streamState = { buffer: "", events: [] };
-  const result = await runCommandStreaming(
-    "codex",
-    ["exec", "review", "--base", baseBranch, ...buildCommonArgs(lastMessageFile), "-"],
-    {
-      cwd: repoRoot,
-      input: prompt,
-      allowFailure: true,
-      onStdout: (chunk) => parseStreamingJsonLines(chunk, streamState, onEvent),
-    },
-  );
-
-  flushStreamingJsonLines(streamState, onEvent);
-  const events = streamState.events.length > 0 ? streamState.events : parseJsonLines(result.stdout);
-  const lastMessage = readLastMessage(lastMessageFile);
-
-  if (result.status !== 0) {
-    return {
-      ok: false,
-      sessionId: extractThreadId(events),
-      error: lastMessage || result.stderr.trim() || "Codex review failed",
-    };
-  }
+export async function reviewWithCodex({ repoRoot, prompt }) {
+  const outputFile = tmpFile("legion-review", "json");
+  const inlinePrompt = appendJsonFileInstructions(prompt, outputFile);
 
   try {
-    return {
-      ok: true,
-      sessionId: extractThreadId(events),
-      review: JSON.parse(lastMessage),
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      sessionId: extractThreadId(events),
-      error: `Review output was not valid JSON: ${lastMessage}`,
-      cause: error,
-    };
+    const result = runInlineCodex(repoRoot, inlinePrompt);
+
+    if (!result.ok) {
+      return result;
+    }
+
+    if (!fs.existsSync(outputFile)) {
+      return {
+        ok: false,
+        error: `Codex did not write the expected review file: ${outputFile}`,
+      };
+    }
+
+    try {
+      return {
+        ok: true,
+        review: readJsonFile(outputFile),
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: `Review output was not valid JSON in ${outputFile}`,
+        cause: error,
+      };
+    }
+  } finally {
+    fs.rmSync(outputFile, { force: true });
   }
 }
-
-export const __testOnly = {
-  flushStreamingJsonLines,
-  parseStreamingJsonLines,
-};

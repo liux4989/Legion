@@ -1,19 +1,19 @@
 import { createOrUpdatePr } from "../lib/pr.js";
 import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, pushBranch, remoteName, repoRoot, workingTreeHasChanges } from "../lib/git.js";
 import { loadTask, saveTask } from "../lib/tasks.js";
-import { assertTaskState, markBlocked, prBody, prTitle, writePrRecord } from "../lib/workflow.js";
+import { assertTaskState, recordError, clearError, prBody, prTitle } from "../lib/workflow.js";
 import { CliError } from "../lib/errors.js";
 
-export async function approveTask(args) {
+export async function prTask(args) {
   const taskId = args[0];
   const root = repoRoot();
 
   if (!taskId) {
-    throw new CliError("Usage: legion approve <task-id>");
+    throw new CliError("Usage: legion pr <task-id>");
   }
 
   const task = loadTask(root, taskId);
-  assertTaskState(task, ["pr_ready"], "approve");
+  assertTaskState(task, ["pr_ready"], "open PR for");
 
   const activeBranch = currentBranch(root);
   if (activeBranch !== task.branchName) {
@@ -44,14 +44,13 @@ export async function approveTask(args) {
 
     task.prUrl = pr.url;
     task.state = "done";
-    task.lastError = null;
+    clearError(root, task);
     saveTask(root, task);
-    writePrRecord(root, task, pr);
 
     console.log(`PR ready: ${pr.url}`);
     console.log(`State: done`);
   } catch (error) {
-    markBlocked(root, task, error);
+    recordError(root, task, error);
     console.error(task.lastError);
   }
 }

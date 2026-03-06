@@ -1,9 +1,7 @@
 import { createTask } from "./commands/create.js";
 import { runTask } from "./commands/run.js";
 import { reviewTask } from "./commands/review.js";
-import { approveTask } from "./commands/approve.js";
-import { rejectTask } from "./commands/reject.js";
-import { showStatus } from "./commands/status.js";
+import { prTask } from "./commands/pr.js";
 import { CliError, formatError } from "./lib/errors.js";
 
 function usage() {
@@ -12,9 +10,7 @@ function usage() {
     '  legion create "<intent>"',
     "  legion run <task-id>",
     "  legion review <task-id>",
-    "  legion approve <task-id>",
-    "  legion reject <task-id> [reason]",
-    "  legion status <task-id>",
+    "  legion pr <task-id>",
   ].join("\n");
 }
 
@@ -29,12 +25,8 @@ export async function main(argv) {
         return await runTask(rest);
       case "review":
         return await reviewTask(rest);
-      case "approve":
-        return await approveTask(rest);
-      case "reject":
-        return await rejectTask(rest);
-      case "status":
-        return await showStatus(rest);
+      case "pr":
+        return await prTask(rest);
       case "--help":
       case "-h":
       case undefined:

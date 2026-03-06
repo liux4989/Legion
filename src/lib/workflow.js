@@ -1,9 +1,6 @@
 import path from "node:path";
 import { CliError } from "./errors.js";
-import { reviewFile, runSummaryFile, saveTask, prFile } from "./tasks.js";
-import { writeJson, writeText } from "./fs.js";
-
-export const REVIEW_LIMIT = 2;
+import { saveTask } from "./tasks.js";
 
 export function assertTaskState(task, allowedStates, action) {
   if (!allowedStates.includes(task.state)) {
@@ -11,22 +8,13 @@ export function assertTaskState(task, allowedStates, action) {
   }
 }
 
-export function markBlocked(repoRoot, task, error) {
-  task.state = "blocked";
+export function recordError(repoRoot, task, error) {
   task.lastError = error instanceof Error ? error.message : String(error);
   saveTask(repoRoot, task);
 }
 
-export function writeRunSummary(repoRoot, task, summary) {
-  writeText(runSummaryFile(repoRoot, task.id), summary);
-}
-
-export function writeReviewResult(repoRoot, task, round, review) {
-  writeJson(reviewFile(repoRoot, task.id, round), review);
-}
-
-export function writePrRecord(repoRoot, task, pr) {
-  writeJson(prFile(repoRoot, task.id), pr);
+export function clearError(_repoRoot, task) {
+  task.lastError = null;
 }
 
 export function prTitle(task) {
@@ -35,7 +23,8 @@ export function prTitle(task) {
 
 export function prBody(task) {
   const summary = task.latestRunSummary || "No execution summary recorded.";
-  const specPath = path.join("tasks", `task_${task.id}`, "spec.md");
+  const specPath = path.join("tasks", `task_${task.id}`, "task.json");
+  const spec = task.spec || "No spec recorded.";
 
   return [
     `## Task`,
@@ -44,7 +33,11 @@ export function prBody(task) {
     "",
     `## Spec`,
     "",
-    `See \`${specPath}\` in local task artifacts.`,
+    `Recorded in \`${specPath}\` locally and inlined here for reviewers:`,
+    "",
+    "```md",
+    spec.trim(),
+    "```",
     "",
     `## Execution Summary`,
     "",

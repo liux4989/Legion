@@ -1,7 +1,7 @@
 import { reviewWithCodex } from "../lib/codex.js";
 import { checkoutBranch, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, repoRoot } from "../lib/git.js";
-import { loadSpec, loadTask, saveTask } from "../lib/tasks.js";
-import { REVIEW_LIMIT, assertTaskState, markBlocked, writeReviewResult } from "../lib/workflow.js";
+import { loadTask, saveTask } from "../lib/tasks.js";
+import { assertTaskState, recordError } from "../lib/workflow.js";
 import { CliError } from "../lib/errors.js";
 
 function validateReviewShape(review) {
@@ -45,6 +45,8 @@ function validateReviewShape(review) {
 function buildReviewPrompt(task, spec) {
   return `Review task ${task.id} against the spec below.
 
+Use git to compare the current branch against base branch ${task.baseBranch}.
+
 Only check:
 - correctness
 - regressions
@@ -72,7 +74,7 @@ export async function reviewTask(args) {
   }
 
   const task = loadTask(root, taskId);
-  assertTaskState(task, ["reviewing", "blocked"], "review");
+  assertTaskState(task, ["reviewing"], "review");
 
   const activeBranch = currentBranch(root);
   if (activeBranch !== task.branchName) {
@@ -84,34 +86,15 @@ export async function reviewTask(args) {
     throw new CliError(`Task ${task.id} has no diff against ${task.baseBranch}. Run the task before review.`);
   }
 
-  const spec = loadSpec(root, task.id);
-  let loggedProgress = false;
   const result = await reviewWithCodex({
     repoRoot: root,
-    baseBranch: task.baseBranch,
-    prompt: buildReviewPrompt(task, spec),
-    onEvent: (event) => {
-      if (event.type === "thread.started") {
-        console.log(`Codex review session: ${event.thread_id}`);
-        loggedProgress = true;
-        return;
-      }
-
-      if (event.type === "turn.started") {
-        console.log("Codex started review...");
-        loggedProgress = true;
-      }
-    },
+    prompt: buildReviewPrompt(task, task.spec),
   });
 
   if (!result.ok) {
-    markBlocked(root, task, result.error);
+    recordError(root, task, result.error);
     console.error(result.error);
     return;
-  }
-
-  if (!loggedProgress) {
-    console.log("Codex review completed without streaming progress events.");
   }
 
   let review;
@@ -119,14 +102,12 @@ export async function reviewTask(args) {
   try {
     review = validateReviewShape(result.review);
   } catch (error) {
-    markBlocked(root, task, error);
+    recordError(root, task, error);
     console.error(task.lastError);
     return;
   }
 
-  task.reviewCount += 1;
   task.latestReviewSummary = review.summary;
-  writeReviewResult(root, task, task.reviewCount, review);
 
   if (review.decision === "pass") {
     task.state = "pr_ready";
@@ -147,16 +128,6 @@ export async function reviewTask(args) {
     .join("\n\n");
 
   task.latestReviewFeedback = `${review.summary}\n\n${findingsText}`;
-
-  if (task.reviewCount >= REVIEW_LIMIT) {
-    task.state = "blocked";
-    task.lastError = `Review limit reached after ${task.reviewCount} rounds.`;
-    saveTask(root, task);
-    console.log(`Review failed for ${task.id}`);
-    console.log(task.lastError);
-    return;
-  }
-
   task.state = "executing";
   task.lastError = null;
   saveTask(root, task);

@@ -83,3 +83,26 @@ export function runCommandStreaming(command, args, options = {}) {
     child.stdin.end();
   });
 }
+
+export function runCommandInteractive(command, args, options = {}) {
+  const result = spawnSync(command, args, {
+    cwd: options.cwd,
+    env: { ...process.env, ...options.env },
+    stdio: "inherit",
+    input: options.input,
+  });
+
+  if (result.error) {
+    throw new CliError(`Failed to execute ${command}: ${result.error.message}`, {
+      cause: result.error,
+    });
+  }
+
+  const status = result.status ?? 1;
+
+  if (status !== 0 && !options.allowFailure) {
+    throw new CliError(`${command} ${args.join(" ")} failed with exit code ${status}`);
+  }
+
+  return { status };
+}
