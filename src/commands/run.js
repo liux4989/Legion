@@ -1,5 +1,5 @@
-import { loadTask, loadSpec, saveTask } from "../lib/tasks.js";
-import { assertTaskState, markBlocked, writeRunSummary } from "../lib/workflow.js";
+import { loadTask, saveTask } from "../lib/tasks.js";
+import { assertTaskState, recordError } from "../lib/workflow.js";
 import { checkoutBranch, currentBranch, ensureWorkingTreeSafe, repoRoot } from "../lib/git.js";
 import { runCodexTask } from "../lib/codex.js";
 import { CliError } from "../lib/errors.js";
@@ -36,7 +36,7 @@ export async function runTask(args) {
   }
 
   const task = loadTask(root, taskId);
-  assertTaskState(task, ["ready", "executing", "blocked"], "run");
+  assertTaskState(task, ["ready", "executing"], "run");
   const shouldResume = task.state === "executing" && Boolean(task.agentSessionId);
 
   const activeBranch = currentBranch(root);
@@ -49,11 +49,10 @@ export async function runTask(args) {
   task.lastError = null;
   saveTask(root, task);
 
-  const spec = loadSpec(root, task.id);
   let sawProgress = false;
   const result = await runCodexTask({
     repoRoot: root,
-    prompt: shouldResume ? buildResumePrompt(task) : buildRunPrompt(task, spec),
+    prompt: shouldResume ? buildResumePrompt(task) : buildRunPrompt(task, task.spec),
     resumeSessionId: shouldResume ? task.agentSessionId : null,
     onEvent: (event) => {
       if (event.type === "thread.started") {
@@ -74,7 +73,7 @@ export async function runTask(args) {
   task.agentSessionId = result.sessionId;
 
   if (!result.ok) {
-    markBlocked(root, task, result.error);
+    recordError(root, task, result.error);
     console.error(result.error);
     return;
   }
@@ -87,8 +86,8 @@ export async function runTask(args) {
   task.latestReviewFeedback = null;
   task.latestReviewSummary = null;
   task.state = "reviewing";
+  task.lastError = null;
   saveTask(root, task);
-  writeRunSummary(root, task, result.summary);
 
   console.log(`Run completed for ${task.id}`);
   console.log(`State: reviewing`);

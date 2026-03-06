@@ -11,7 +11,7 @@ export async function createTask(args) {
   }
 
   const root = repoRoot();
-  const taskId = makeTaskId(intent);
+  const taskId = makeTaskId();
   const spec = buildSpec(intent, taskId);
   const baseBranch = currentBranch(root) || "main";
   const branchName = `task/${taskId}`;
@@ -26,7 +26,6 @@ export async function createTask(args) {
     createdAt: now,
     updatedAt: now,
     agentSessionId: null,
-    reviewCount: 0,
     latestRunSummary: null,
     latestReviewSummary: null,
     latestReviewFeedback: null,
@@ -39,5 +38,5 @@ export async function createTask(args) {
   console.log(`Created task ${taskId}`);
   console.log(`State: ready`);
   console.log(`Branch: ${branchName}`);
-  console.log(`Spec: tasks/task_${taskId}/spec.md`);
+  console.log(`Task: tasks/task_${taskId}/task.json`);
 }
