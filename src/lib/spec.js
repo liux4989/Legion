@@ -1,31 +1,107 @@
-export function buildSpec(intent, taskId, notes = "") {
-  const noteLine = notes.trim() || "- None provided";
+import { CliError } from "./errors.js";
+
+function normalizeLine(value) {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeList(values, sectionName) {
+  if (!Array.isArray(values) || values.length === 0) {
+    throw new CliError(`Generated spec is missing section: ${sectionName}`);
+  }
+
+  return values
+    .map((value) => normalizeLine(value))
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
+export function buildSpecPrompt(intent, taskId) {
+  return `Write a compact implementation spec for Legion task ${taskId}.
+
+User intent:
+${intent}
+
+Return JSON only using the provided schema.
+
+Rules:
+- Enrich the user's intent into an execution-ready spec without broadening scope.
+- Keep every section short and concrete.
+- Prefer the smallest change that satisfies the request.
+- Do not mention tests unless clearly required by the intent.
+- Keep wording review-friendly for a coding agent.
+`;
+}
+
+export function validateSpecDraft(draft) {
+  if (!draft || typeof draft !== "object") {
+    throw new CliError("Generated spec was not an object.");
+  }
+
+  const goal = normalizeLine(draft.goal);
+
+  if (!goal) {
+    throw new CliError("Generated spec is missing section: Goal");
+  }
+
+  return {
+    goal,
+    expectedBehavior: normalizeList(draft.expectedBehavior, "Expected Behavior"),
+    constraints: normalizeList(draft.constraints, "Constraints"),
+    successCriteria: normalizeList(draft.successCriteria, "Success Criteria"),
+  };
+}
+
+export function specOutputSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: ["goal", "expectedBehavior", "constraints", "successCriteria"],
+    properties: {
+      goal: { type: "string", minLength: 1 },
+      expectedBehavior: {
+        type: "array",
+        minItems: 2,
+        maxItems: 4,
+        items: { type: "string", minLength: 1 },
+      },
+      constraints: {
+        type: "array",
+        minItems: 2,
+        maxItems: 4,
+        items: { type: "string", minLength: 1 },
+      },
+      successCriteria: {
+        type: "array",
+        minItems: 2,
+        maxItems: 4,
+        items: { type: "string", minLength: 1 },
+      },
+    },
+  };
+}
+
+export function renderSpec(taskId, draft) {
+  const spec = validateSpecDraft(draft);
+  const renderList = (items) => items.map((item) => `- ${item}`).join("\n");
 
   return `# Task ${taskId}
 
 ## Goal
 
-${intent}
+${spec.goal}
 
 ## Expected Behavior
 
-- Describe the user-visible outcome the change should produce.
-- Call out edge cases or workflows that must keep working.
+${renderList(spec.expectedBehavior)}
 
 ## Constraints
 
-- Stay within the current project scope.
-- Prefer the smallest change that satisfies the task.
-- Keep the implementation debuggable and easy to review.
+${renderList(spec.constraints)}
 
 ## Success Criteria
 
-- The requested change is implemented.
-- Relevant checks have been run or their omission is explained.
-- The execution summary explains what changed.
-
-## Optional Notes
-
-${noteLine}
+${renderList(spec.successCriteria)}
 `;
 }

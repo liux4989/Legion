@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { runCommand, runCommandInteractive, runCommandStreaming } from "./shell.js";
 import { CliError } from "./errors.js";
+import { writeJson } from "./fs.js";
 
 function tmpFile(prefix, extension) {
   return path.join(os.tmpdir(), `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}.${extension}`);
@@ -103,6 +104,50 @@ function buildInteractiveArgs(prompt) {
     : [];
 
   return ["--no-alt-screen", ...extraArgs, prompt];
+}
+
+export async function generateObjectWithCodex({ repoRoot, prompt, schema, prefix = "legion" }) {
+  const lastMessageFile = tmpFile(prefix, "json");
+  const schemaFile = tmpFile(`${prefix}-schema`, "json");
+
+  try {
+    writeJson(schemaFile, schema);
+
+    const result = runCommand(
+      "codex",
+      ["exec", ...buildCommonArgs(lastMessageFile), "--output-schema", schemaFile, "-"],
+      {
+        cwd: repoRoot,
+        input: prompt,
+        allowFailure: true,
+      },
+    );
+
+    const lastMessage = readLastMessage(lastMessageFile);
+
+    if (result.status !== 0) {
+      return {
+        ok: false,
+        error: lastMessage || result.stderr.trim() || "Codex generation failed",
+      };
+    }
+
+    try {
+      return {
+        ok: true,
+        value: JSON.parse(lastMessage),
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: `Codex output was not valid JSON: ${lastMessage}`,
+        cause: error,
+      };
+    }
+  } finally {
+    fs.rmSync(lastMessageFile, { force: true });
+    fs.rmSync(schemaFile, { force: true });
+  }
 }
 
 export async function runCodexTask({ repoRoot, prompt }) {

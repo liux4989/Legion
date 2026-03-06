@@ -6,7 +6,7 @@ Legion is a minimal prototype orchestrator for coding tasks. It implements a dir
 
 - Harness: `codex` CLI only
 - Isolation: git branches
-- Spec creation: local task record only
+- Spec creation: Codex-generated spec from the user intent
 - PR creation: explicit `pr` command after review passes
 
 ## Requirements
@@ -61,6 +61,7 @@ tasks/
 
 ## Notes
 
+- `create` uses Codex to expand the user intent into a short task spec stored in `task.json`.
 - `run` launches an inline visible `codex` session and waits for it to exit.
 - `run` is a one-shot invocation. If review fails and the task returns to `executing`, running it again starts a fresh Codex session.
 - `review` uses `codex exec review` with prompt-constrained JSON output plus local validation.
