@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { CliError } from "./errors.js";
 
 export function runCommand(command, args, options = {}) {
@@ -30,4 +31,55 @@ export function runCommand(command, args, options = {}) {
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
   };
+}
+
+export function runCommandStreaming(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      env: { ...process.env, ...options.env },
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.on("error", (error) => {
+      reject(new CliError(`Failed to execute ${command}: ${error.message}`, { cause: error }));
+    });
+
+    child.stdout.on("data", (chunk) => {
+      const text = String(chunk);
+      stdout += text;
+      options.onStdout?.(text);
+    });
+
+    child.stderr.on("data", (chunk) => {
+      const text = String(chunk);
+      stderr += text;
+      options.onStderr?.(text);
+    });
+
+    child.on("close", (code) => {
+      const status = code ?? 1;
+
+      if (status !== 0 && !options.allowFailure) {
+        const details = stderr.trim() || stdout.trim();
+        reject(
+          new CliError(
+            details ? `${command} ${args.join(" ")} failed: ${details}` : `${command} ${args.join(" ")} failed`,
+          ),
+        );
+        return;
+      }
+
+      resolve({ status, stdout, stderr });
+    });
+
+    if (options.input) {
+      child.stdin.write(options.input);
+    }
+
+    child.stdin.end();
+  });
 }

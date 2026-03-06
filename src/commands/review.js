@@ -85,16 +85,33 @@ export async function reviewTask(args) {
   }
 
   const spec = loadSpec(root, task.id);
-  const result = reviewWithCodex({
+  let loggedProgress = false;
+  const result = await reviewWithCodex({
     repoRoot: root,
     baseBranch: task.baseBranch,
     prompt: buildReviewPrompt(task, spec),
+    onEvent: (event) => {
+      if (event.type === "thread.started") {
+        console.log(`Codex review session: ${event.thread_id}`);
+        loggedProgress = true;
+        return;
+      }
+
+      if (event.type === "turn.started") {
+        console.log("Codex started review...");
+        loggedProgress = true;
+      }
+    },
   });
 
   if (!result.ok) {
     markBlocked(root, task, result.error);
     console.error(result.error);
     return;
+  }
+
+  if (!loggedProgress) {
+    console.log("Codex review completed without streaming progress events.");
   }
 
   let review;

@@ -50,10 +50,25 @@ export async function runTask(args) {
   saveTask(root, task);
 
   const spec = loadSpec(root, task.id);
-  const result = runCodexTask({
+  let sawProgress = false;
+  const result = await runCodexTask({
     repoRoot: root,
     prompt: shouldResume ? buildResumePrompt(task) : buildRunPrompt(task, spec),
     resumeSessionId: shouldResume ? task.agentSessionId : null,
+    onEvent: (event) => {
+      if (event.type === "thread.started") {
+        task.agentSessionId = event.thread_id;
+        saveTask(root, task);
+        console.log(`Codex session: ${event.thread_id}`);
+        sawProgress = true;
+        return;
+      }
+
+      if (event.type === "turn.started") {
+        console.log(shouldResume ? "Codex resumed task execution..." : "Codex started task execution...");
+        sawProgress = true;
+      }
+    },
   });
 
   task.agentSessionId = result.sessionId;
@@ -62,6 +77,10 @@ export async function runTask(args) {
     markBlocked(root, task, result.error);
     console.error(result.error);
     return;
+  }
+
+  if (!sawProgress) {
+    console.log("Codex completed without streaming progress events.");
   }
 
   task.latestRunSummary = result.summary;
