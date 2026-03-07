@@ -138,40 +138,9 @@ Do not broaden scope.
 
 Rules:
 - Work interactively with the user in the terminal before finalizing the spec.
-- Present the draft spec for review as tagged structural markdown, not JSON.
-- Use this exact review format:
-<spec_draft>
-## Title
-...
-
-## Goal
-...
-
-## Scope
-- ...
-
-## Non-goals
-- ...
-
-## User-visible behavior
-- ...
-
-## Requirements
-- ...
-
-## Edge cases
-- ...
-
-## Dependencies / assumptions
-- ...
-
-## Success Criteria
-- ...
-
-## Implementation notes
-- ...
-</spec_draft>
-- Refine that tagged markdown draft based on user feedback and ask for explicit approval.
+- Present the draft spec for review as markdown, not JSON.
+- Keep the markdown aligned to the final spec structure: Title, Goal, Scope, Non-goals, User-visible behavior, Requirements, Edge cases, Dependencies / assumptions, Success Criteria, and Implementation notes.
+- Refine that markdown draft based on user feedback and ask for explicit approval.
 - Do not write the final JSON to the requested output file until the user explicitly approves the spec.
 - Do not introduce new product behavior unless necessary to make the request executable.
 - When ambiguity exists, either:
