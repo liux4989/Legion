@@ -117,6 +117,9 @@ Preserve the original intent and core user value.
 Do not broaden scope.
 
 Rules:
+- Work interactively with the user in the terminal before finalizing the spec.
+- Present the draft spec for review, refine it based on user feedback, and ask for explicit approval.
+- Do not write the final JSON to the requested output file until the user explicitly approves the spec.
 - Do not introduce new product behavior unless necessary to make the request executable.
 - When ambiguity exists, either:
   1. resolve it conservatively
