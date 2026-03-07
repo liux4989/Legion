@@ -49,10 +49,6 @@ export function loadTask(repoRoot, taskId) {
 
   const task = readJson(filePath);
 
-  if (task.state === "executing") {
-    task.state = "fixing";
-  }
-
   if (!task.spec && exists(legacySpecFile(repoRoot, taskId))) {
     task.spec = readText(legacySpecFile(repoRoot, taskId));
   }
