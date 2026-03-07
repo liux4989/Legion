@@ -19,7 +19,7 @@ function normalizeList(values, sectionName) {
 
 function normalizeOptionalList(values) {
   if (!Array.isArray(values)) {
-    throw new CliError("Generated intent brief is missing section: Unknowns");
+    throw new CliError("Generated output is missing required list section.");
   }
 
   return values
@@ -100,7 +100,7 @@ export function intentBriefOutputSchema() {
 }
 
 export function buildSpecPrompt(intentBrief, taskId) {
-  return `Write a compact implementation spec issue for Legion task ${taskId} using the Intent Brief below.
+  return `Transform the Intent Brief into a well-scoped, executable spec issue for Legion task ${taskId}.
 
 Intent Brief:
 - Original intent: ${intentBrief.originalIntent}
@@ -112,12 +112,34 @@ ${intentBrief.constraints.map((item) => `  - ${item}`).join("\n")}
 - Unknowns:
 ${intentBrief.unknowns.length > 0 ? intentBrief.unknowns.map((item) => `  - ${item}`).join("\n") : "  - None"}
 
+Use the Intent Brief as the source of truth.
+Preserve the original intent and core user value.
+Do not broaden scope.
+
 Rules:
-- Enrich the intent brief into an execution-ready spec without broadening scope.
-- Keep every section short and concrete.
-- Prefer the smallest change that satisfies the request.
+- Do not introduce new product behavior unless necessary to make the request executable.
+- When ambiguity exists, either:
+  1. resolve it conservatively
+  2. record it as an explicit assumption
+  3. place it in non-goals if it is not required for the smallest complete unit of value
+- Prefer the smallest complete unit of user value.
+- Separate in-scope work from non-goals clearly.
+- Convert vague behavior into observable requirements.
+- Use User-visible behavior for external, UX-facing outcomes that humans can quickly read.
+- Use Requirements for the system rules and conditions that must hold to produce the behavior.
+- Overlap between User-visible behavior and Requirements is acceptable when it improves clarity.
+- Define success criteria that a reviewer can validate quickly.
+- Avoid implementation detail unless it is needed to remove ambiguity or prevent repeated failure.
 - Do not mention tests unless clearly required by the intent.
-- Keep wording review-friendly for a coding agent.
+- Keep the spec concise, concrete, and execution-oriented.
+
+Style constraints:
+- Keep each section concise and high-signal.
+- Prefer short bullets over dense paragraphs.
+- Avoid filler, repetition, and generic engineering advice.
+- Include only details that help execution or review.
+- Use concrete, observable wording.
+- If a section has no meaningful content, return an empty list rather than placeholders.
 `;
 }
 
@@ -126,17 +148,28 @@ export function validateSpecDraft(draft) {
     throw new CliError("Generated spec was not an object.");
   }
 
+  const title = normalizeLine(draft.title);
   const goal = normalizeLine(draft.goal);
+
+  if (!title) {
+    throw new CliError("Generated spec is missing section: Title");
+  }
 
   if (!goal) {
     throw new CliError("Generated spec is missing section: Goal");
   }
 
   return {
+    title,
     goal,
-    expectedBehavior: normalizeList(draft.expectedBehavior, "Expected Behavior"),
-    constraints: normalizeList(draft.constraints, "Constraints"),
+    scope: normalizeList(draft.scope, "Scope"),
+    nonGoals: normalizeOptionalList(draft.nonGoals),
+    userVisibleBehavior: normalizeOptionalList(draft.userVisibleBehavior),
+    requirements: normalizeList(draft.requirements, "Requirements"),
+    edgeCases: normalizeOptionalList(draft.edgeCases),
+    dependenciesAssumptions: normalizeOptionalList(draft.dependenciesAssumptions),
     successCriteria: normalizeList(draft.successCriteria, "Success Criteria"),
+    implementationNotes: normalizeOptionalList(draft.implementationNotes),
   };
 }
 
@@ -144,25 +177,67 @@ export function specOutputSchema() {
   return {
     type: "object",
     additionalProperties: false,
-    required: ["goal", "expectedBehavior", "constraints", "successCriteria"],
+    required: [
+      "title",
+      "goal",
+      "scope",
+      "nonGoals",
+      "userVisibleBehavior",
+      "requirements",
+      "edgeCases",
+      "dependenciesAssumptions",
+      "successCriteria",
+      "implementationNotes",
+    ],
     properties: {
+      title: { type: "string", minLength: 1 },
       goal: { type: "string", minLength: 1 },
-      expectedBehavior: {
+      scope: {
         type: "array",
-        minItems: 2,
-        maxItems: 4,
+        minItems: 1,
+        maxItems: 8,
         items: { type: "string", minLength: 1 },
       },
-      constraints: {
+      nonGoals: {
         type: "array",
-        minItems: 2,
-        maxItems: 4,
+        minItems: 0,
+        maxItems: 8,
+        items: { type: "string", minLength: 1 },
+      },
+      userVisibleBehavior: {
+        type: "array",
+        minItems: 0,
+        maxItems: 8,
+        items: { type: "string", minLength: 1 },
+      },
+      requirements: {
+        type: "array",
+        minItems: 1,
+        maxItems: 8,
+        items: { type: "string", minLength: 1 },
+      },
+      edgeCases: {
+        type: "array",
+        minItems: 0,
+        maxItems: 8,
+        items: { type: "string", minLength: 1 },
+      },
+      dependenciesAssumptions: {
+        type: "array",
+        minItems: 0,
+        maxItems: 8,
         items: { type: "string", minLength: 1 },
       },
       successCriteria: {
         type: "array",
-        minItems: 2,
-        maxItems: 4,
+        minItems: 1,
+        maxItems: 8,
+        items: { type: "string", minLength: 1 },
+      },
+      implementationNotes: {
+        type: "array",
+        minItems: 0,
+        maxItems: 8,
         items: { type: "string", minLength: 1 },
       },
     },
@@ -172,23 +247,36 @@ export function specOutputSchema() {
 export function renderSpec(taskId, draft) {
   const spec = validateSpecDraft(draft);
   const renderList = (items) => items.map((item) => `- ${item}`).join("\n");
+  const sections = [
+    `# ${spec.title}`,
+    `Task ID: ${taskId}`,
+    `## Goal\n\n${spec.goal}`,
+    `## Scope\n\n${renderList(spec.scope)}`,
+  ];
 
-  return `# Task ${taskId}
+  if (spec.nonGoals.length > 0) {
+    sections.push(`## Non-goals\n\n${renderList(spec.nonGoals)}`);
+  }
 
-## Goal
+  if (spec.userVisibleBehavior.length > 0) {
+    sections.push(`## User-visible behavior\n\n${renderList(spec.userVisibleBehavior)}`);
+  }
 
-${spec.goal}
+  sections.push(`## Requirements\n\n${renderList(spec.requirements)}`);
 
-## Expected Behavior
+  if (spec.edgeCases.length > 0) {
+    sections.push(`## Edge cases\n\n${renderList(spec.edgeCases)}`);
+  }
 
-${renderList(spec.expectedBehavior)}
+  if (spec.dependenciesAssumptions.length > 0) {
+    sections.push(`## Dependencies / assumptions\n\n${renderList(spec.dependenciesAssumptions)}`);
+  }
 
-## Constraints
+  sections.push(`## Success Criteria\n\n${renderList(spec.successCriteria)}`);
 
-${renderList(spec.constraints)}
+  if (spec.implementationNotes.length > 0) {
+    sections.push(`## Implementation notes\n\n${renderList(spec.implementationNotes)}`);
+  }
 
-## Success Criteria
-
-${renderList(spec.successCriteria)}
-`;
+  return `${sections.join("\n\n")}\n`;
 }

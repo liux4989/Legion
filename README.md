@@ -41,10 +41,10 @@ Create a task:
 legion create "Fix race condition in session cleanup"
 ```
 
-`create` runs two non-interactive one-shot Codex passes with `codex exec`:
+`create` runs two Codex passes:
 
-1. Normalize raw intent into a structured `Intent Brief`
-2. Expand the `Intent Brief` into the final spec issue stored in `task.json`
+1. Normalize raw intent into a structured `Intent Brief` with non-interactive `codex exec`
+2. Expand the `Intent Brief` into the final spec issue in an inline interactive Codex session
 
 Run the autonomous execute→review→fix loop:
 
@@ -72,13 +72,24 @@ tasks/
 
 ## Notes
 
-- `create` is autonomous and non-interactive. It uses `codex exec` to generate a structured `Intent Brief`, then turns that into the final task spec stored in `task.json`.
+- `create` starts with a non-interactive `codex exec` pass to generate a structured `Intent Brief`, then keeps the spec-authoring pass inline and interactive.
 - `Intent Brief` is the normalization layer between raw user input and the final spec issue. It includes:
   - `Original intent`
   - `Core user value`
   - `Expected behavior`
   - `Constraints`
   - `Unknowns`
+- The final spec is structured into:
+  - `Title`
+  - `Goal`
+  - `Scope`
+  - `Non-goals`
+  - `User-visible behavior`
+  - `Requirements`
+  - `Edge cases`
+  - `Dependencies / assumptions`
+  - `Success criteria`
+  - `Implementation notes`
 - `run` launches codex with `--full-auto` and auto-advances through execute→review→fix phases without manual intervention.
 - The user can interact with codex during execution (it runs inline with `stdio: "inherit"`). Ctrl-C aborts the loop.
 - Review findings are fed back to codex as fix instructions on the next iteration.

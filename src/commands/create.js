@@ -1,4 +1,4 @@
-import { generateObjectWithCodexExec } from "../lib/codex.js";
+import { generateObjectWithCodex, generateObjectWithCodexExec } from "../lib/codex.js";
 import { repoRoot, currentBranch } from "../lib/git.js";
 import { createTaskRecord, makeTaskId } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
@@ -31,10 +31,11 @@ export async function createTask(args) {
   }
 
   const intentBrief = validateIntentBriefDraft(briefResult.value);
-  const draftResult = await generateObjectWithCodexExec({
+  const draftResult = await generateObjectWithCodex({
     repoRoot: root,
     prompt: buildSpecPrompt(intentBrief, taskId),
     schema: specOutputSchema(),
+    prefix: "legion-create",
   });
 
   if (!draftResult.ok) {
