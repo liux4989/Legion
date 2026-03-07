@@ -1,0 +1,4 @@
+#!/bin/sh
+# Codex notify hook — writes a sentinel file on turn completion.
+# Set LEGION_SENTINEL_FILE in env before launching codex.
+[ -n "$LEGION_SENTINEL_FILE" ] && echo "$1" > "$LEGION_SENTINEL_FILE"

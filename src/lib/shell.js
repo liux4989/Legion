@@ -106,3 +106,30 @@ export function runCommandInteractive(command, args, options = {}) {
 
   return { status };
 }
+
+export function runCommandInheritAsync(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      env: { ...process.env, ...options.env },
+      stdio: "inherit",
+    });
+
+    child.on("error", (error) => {
+      reject(new CliError(`Failed to execute ${command}: ${error.message}`, { cause: error }));
+    });
+
+    child.on("close", (code) => {
+      const status = code ?? 1;
+
+      if (status !== 0 && !options.allowFailure) {
+        reject(new CliError(`${command} ${args.join(" ")} failed with exit code ${status}`));
+        return;
+      }
+
+      resolve({ status });
+    });
+
+    options.onChild?.(child);
+  });
+}
