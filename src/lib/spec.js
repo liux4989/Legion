@@ -29,18 +29,18 @@ function normalizeOptionalList(values) {
 }
 
 export function buildIntentBriefPrompt(intent, taskId) {
-  return `Normalize the user request into an Intent Brief for Legion task ${taskId}.
+  return `Create an Intent Brief for Legion task ${taskId}.
 
-User intent:
+User request:
 ${intent}
 
-Rules:
-- Keep the brief deterministic and structural.
-- Do not broaden scope.
-- Preserve the original intent in normalized form.
-- Keep each field concise and execution-oriented.
-- Unknowns should only include real unresolved items, not speculation.
-- Do not mention tests unless clearly required by the intent.
+Requirements:
+- Preserve the original request in normalized form.
+- Keep the brief deterministic, structural, and execution-oriented.
+- Do not broaden scope or add new product behavior.
+- Keep every field concise.
+- Unknowns must contain only real unresolved items.
+- Do not mention tests unless the request explicitly requires them.
 `;
 }
 
@@ -127,44 +127,36 @@ ${unknowns}
 }
 
 export function buildSpecPrompt(intentBrief, taskId) {
-  return `Transform the Intent Brief into a well-scoped, executable spec issue for Legion task ${taskId}.
+  return `Create a spec draft for Legion task ${taskId} from this Intent Brief.
 
-Use this tagged brief as the source of truth:
-
+Source of truth:
 ${renderIntentBriefContext(intentBrief)}
 
-Preserve the original intent and core user value.
-Do not broaden scope.
-
-Rules:
+Process:
 - Work interactively with the user in the terminal before finalizing the spec.
-- Present the draft spec for review as markdown, not JSON.
-- Keep the markdown aligned to the final spec structure: Title, Goal, Scope, Non-goals, User-visible behavior, Requirements, Edge cases, Dependencies / assumptions, Success Criteria, and Implementation notes.
-- Refine that markdown draft based on user feedback and ask for explicit approval.
-- Do not write the final JSON to the requested output file until the user explicitly approves the spec.
-- Do not introduce new product behavior unless necessary to make the request executable.
-- When ambiguity exists, either:
-  1. resolve it conservatively
-  2. record it as an explicit assumption
-  3. place it in non-goals if it is not required for the smallest complete unit of value
+- First present the draft for review as markdown, not JSON.
+- Keep that markdown aligned to the final spec structure: Title, Goal, Scope, Non-goals, User-visible behavior, Requirements, Edge cases, Dependencies / assumptions, Success Criteria, and Implementation notes.
+- Refine the markdown draft from user feedback and ask for explicit approval.
+- Do not write the final JSON output file until the user explicitly approves the spec.
+
+Scope rules:
+- Preserve the original intent and core user value.
+- Do not broaden scope.
 - Prefer the smallest complete unit of user value.
+- Do not introduce new product behavior unless it is required to make the request executable.
+- When ambiguity exists, resolve it conservatively, record it as an explicit assumption, or move it to non-goals.
 - Separate in-scope work from non-goals clearly.
 - Convert vague behavior into observable requirements.
-- Use User-visible behavior for external, UX-facing outcomes that humans can quickly read.
-- Use Requirements for the system rules and conditions that must hold to produce the behavior.
-- Overlap between User-visible behavior and Requirements is acceptable when it improves clarity.
 - Define success criteria that a reviewer can validate quickly.
-- Avoid implementation detail unless it is needed to remove ambiguity or prevent repeated failure.
-- Do not mention tests unless clearly required by the intent.
-- Keep the spec concise, concrete, and execution-oriented.
+- Avoid implementation detail unless it removes ambiguity or prevents repeated failure.
+- Do not mention tests unless the request explicitly requires them.
 
-Style constraints:
-- Keep each section concise and high-signal.
+Writing style:
+- Keep the spec concise, concrete, and execution-oriented.
 - Prefer short bullets over dense paragraphs.
-- Avoid filler, repetition, and generic engineering advice.
-- Include only details that help execution or review.
 - Use concrete, observable wording.
-- If a section has no meaningful content, return an empty list rather than placeholders.
+- Avoid filler, repetition, and generic engineering advice.
+- If a section has no meaningful content, return an empty list.
 `;
 }
 
