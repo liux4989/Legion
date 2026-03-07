@@ -1,12 +1,12 @@
 # Legion
 
-Legion is a minimal prototype orchestrator for coding tasks. It implements a direct `Intent -> Spec -> Execute -> Review -> Fix -> PR` loop with the local `codex` CLI.
+Legion is a minimal prototype orchestrator for coding tasks. It implements an `Intent -> Intent Brief -> Spec -> Execute -> Review -> Fix -> PR` loop with the local `codex` CLI.
 
 ## Decisions
 
 - Harness: `codex` CLI only
 - Isolation: git branches
-- Spec creation: Codex-generated spec from the user intent
+- Spec creation: Codex-generated `Intent Brief` then final spec issue
 - PR creation: explicit `pr` command after review passes
 - Auto-exit: uses codex `notify` hook to detect turn completion and auto-advance phases
 
@@ -41,6 +41,11 @@ Create a task:
 legion create "Fix race condition in session cleanup"
 ```
 
+`create` runs two non-interactive one-shot Codex passes with `codex exec`:
+
+1. Normalize raw intent into a structured `Intent Brief`
+2. Expand the `Intent Brief` into the final spec issue stored in `task.json`
+
 Run the autonomous execute→review→fix loop:
 
 ```bash
@@ -67,7 +72,13 @@ tasks/
 
 ## Notes
 
-- `create` launches an inline visible `codex` session to expand the user intent into a short task spec stored in `task.json`.
+- `create` is autonomous and non-interactive. It uses `codex exec` to generate a structured `Intent Brief`, then turns that into the final task spec stored in `task.json`.
+- `Intent Brief` is the normalization layer between raw user input and the final spec issue. It includes:
+  - `Original intent`
+  - `Core user value`
+  - `Expected behavior`
+  - `Constraints`
+  - `Unknowns`
 - `run` launches codex with `--full-auto` and auto-advances through execute→review→fix phases without manual intervention.
 - The user can interact with codex during execution (it runs inline with `stdio: "inherit"`). Ctrl-C aborts the loop.
 - Review findings are fed back to codex as fix instructions on the next iteration.

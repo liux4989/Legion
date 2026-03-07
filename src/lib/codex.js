@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { runCommandInteractive, runCommandInheritAsync } from "./shell.js";
+import { runCommand, runCommandInteractive, runCommandInheritAsync } from "./shell.js";
 
 function tmpFile(prefix, extension) {
   return path.join(os.tmpdir(), `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}.${extension}`);
@@ -17,6 +17,14 @@ function buildInteractiveArgs(prompt) {
     : [];
 
   return ["--no-alt-screen", ...extraArgs, prompt];
+}
+
+function buildExecArgs(prompt) {
+  const extraArgs = process.env.LEGION_CODEX_ARGS?.trim()
+    ? process.env.LEGION_CODEX_ARGS.trim().split(/\s+/)
+    : [];
+
+  return ["exec", ...extraArgs, prompt];
 }
 
 function appendJsonFileInstructions(prompt, outputFile) {
@@ -45,6 +53,26 @@ function runInlineCodex(repoRoot, prompt) {
   }
 
   return { ok: true };
+}
+
+function runExecCodex(repoRoot, prompt) {
+  const result = runCommand("codex", buildExecArgs(prompt), {
+    cwd: repoRoot,
+    allowFailure: true,
+  });
+
+  if (result.status !== 0) {
+    const details = result.stderr.trim() || result.stdout.trim();
+    return {
+      ok: false,
+      error: details || `Codex exited with code ${result.status}`,
+    };
+  }
+
+  return {
+    ok: true,
+    output: result.stdout.trim(),
+  };
 }
 
 export async function generateObjectWithCodex({ repoRoot, prompt, schema, prefix = "legion" }) {
@@ -85,6 +113,33 @@ ${JSON.stringify(schema, null, 2)}`,
     }
   } finally {
     fs.rmSync(outputFile, { force: true });
+  }
+}
+
+export async function generateObjectWithCodexExec({ repoRoot, prompt, schema }) {
+  const inlinePrompt = `${prompt}
+
+Return JSON only using the provided schema.
+
+JSON schema:
+${JSON.stringify(schema, null, 2)}`;
+  const result = runExecCodex(repoRoot, inlinePrompt);
+
+  if (!result.ok) {
+    return result;
+  }
+
+  try {
+    return {
+      ok: true,
+      value: JSON.parse(result.output),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: "Codex output was not valid JSON.",
+      cause: error,
+    };
   }
 }
 
