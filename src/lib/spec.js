@@ -99,20 +99,40 @@ export function intentBriefOutputSchema() {
   };
 }
 
+function renderSectionList(items) {
+  return items.map((item) => `- ${item}`).join("\n");
+}
+
+function renderIntentBriefContext(intentBrief) {
+  const unknowns = intentBrief.unknowns.length > 0 ? renderSectionList(intentBrief.unknowns) : "- None";
+
+  return `<intent_brief>
+# Intent Brief
+
+## Original intent
+${intentBrief.originalIntent}
+
+## Core user value
+${intentBrief.coreUserValue}
+
+## Expected behavior
+${renderSectionList(intentBrief.expectedBehavior)}
+
+## Constraints
+${renderSectionList(intentBrief.constraints)}
+
+## Unknowns
+${unknowns}
+</intent_brief>`;
+}
+
 export function buildSpecPrompt(intentBrief, taskId) {
   return `Transform the Intent Brief into a well-scoped, executable spec issue for Legion task ${taskId}.
 
-Intent Brief:
-- Original intent: ${intentBrief.originalIntent}
-- Core user value: ${intentBrief.coreUserValue}
-- Expected behavior:
-${intentBrief.expectedBehavior.map((item) => `  - ${item}`).join("\n")}
-- Constraints:
-${intentBrief.constraints.map((item) => `  - ${item}`).join("\n")}
-- Unknowns:
-${intentBrief.unknowns.length > 0 ? intentBrief.unknowns.map((item) => `  - ${item}`).join("\n") : "  - None"}
+Use this tagged brief as the source of truth:
 
-Use the Intent Brief as the source of truth.
+${renderIntentBriefContext(intentBrief)}
+
 Preserve the original intent and core user value.
 Do not broaden scope.
 
