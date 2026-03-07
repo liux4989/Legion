@@ -2,10 +2,36 @@ import path from "node:path";
 import { CliError } from "./errors.js";
 import { saveTask } from "./tasks.js";
 
+const TASK_TRANSITIONS = {
+  ready: {
+    start_execution: "executing",
+  },
+  executing: {
+    execution_succeeded: "reviewing",
+  },
+  reviewing: {
+    review_passed: "pr_ready",
+    review_failed: "executing",
+  },
+  pr_ready: {},
+  done: {},
+};
+
 export function assertTaskState(task, allowedStates, action) {
   if (!allowedStates.includes(task.state)) {
     throw new CliError(`Cannot ${action} task ${task.id} while state is ${task.state}. Allowed: ${allowedStates.join(", ")}`);
   }
+}
+
+export function transitionTask(task, event) {
+  const nextState = TASK_TRANSITIONS[task.state]?.[event];
+
+  if (!nextState) {
+    throw new CliError(`Invalid transition for task ${task.id}: ${task.state} -> ${event}`);
+  }
+
+  task.state = nextState;
+  return task;
 }
 
 export function recordError(repoRoot, task, error) {

@@ -1,5 +1,5 @@
 import { loadTask, saveTask } from "../lib/tasks.js";
-import { assertTaskState, recordError } from "../lib/workflow.js";
+import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js";
 import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, repoRoot, workingTreeHasChanges } from "../lib/git.js";
 import { runCodexTaskAutoExit, reviewWithCodexAutoExit } from "../lib/codex.js";
 import { CliError } from "../lib/errors.js";
@@ -67,7 +67,9 @@ function validateReviewShape(review) {
 }
 
 async function executePhase(root, task) {
-  task.state = "executing";
+  if (task.state === "ready") {
+    transitionTask(task, "start_execution");
+  }
   task.lastError = null;
   saveTask(root, task);
 
@@ -88,7 +90,7 @@ async function executePhase(root, task) {
   task.latestRunSummary = result.summary;
   task.latestReviewFeedback = null;
   task.latestReviewSummary = null;
-  task.state = "reviewing";
+  transitionTask(task, "execution_succeeded");
   task.lastError = null;
   saveTask(root, task);
   console.log(`\n── execute done ── state: reviewing`);
@@ -122,7 +124,7 @@ async function reviewPhase(root, task) {
   task.latestReviewSummary = review.summary;
 
   if (review.decision === "pass") {
-    task.state = "pr_ready";
+    transitionTask(task, "review_passed");
     task.latestReviewFeedback = null;
     task.lastError = null;
     saveTask(root, task);
@@ -138,7 +140,7 @@ async function reviewPhase(root, task) {
     .join("\n\n");
 
   task.latestReviewFeedback = `${review.summary}\n\n${findingsText}`;
-  task.state = "executing";
+  transitionTask(task, "review_failed");
   task.lastError = null;
   saveTask(root, task);
   console.log(`\n── review failed ── looping back to execute`);
