@@ -1,7 +1,8 @@
 import { generateObjectWithCodex, generateObjectWithCodexExec } from "../lib/codex.js";
-import { repoRoot, currentBranch } from "../lib/git.js";
+import { currentBranch } from "../lib/git.js";
 import { createTaskRecord, makeTaskId } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
+import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
 import {
   buildIntentBriefPrompt,
   buildSpecPrompt,
@@ -12,13 +13,15 @@ import {
 } from "../lib/spec.js";
 
 export async function createTask(args) {
-  const intent = args.join(" ").trim();
+  const parsed = parseProjectArgs(args);
+  const intent = parsed.args.join(" ").trim();
 
   if (!intent) {
-    throw new CliError('Usage: legion create "<intent>"');
+    throw new CliError('Usage: legion create [--project <name|path>] "<intent>"');
   }
 
-  const root = repoRoot();
+  const project = resolveProjectContext(parsed.projectRef);
+  const root = project.root;
   const taskId = makeTaskId();
   const briefResult = await generateObjectWithCodexExec({
     repoRoot: root,
@@ -65,6 +68,7 @@ export async function createTask(args) {
 
   createTaskRecord(root, { id: taskId, spec, task });
 
+  console.log(`Project: ${project.name} (${project.path})`);
   console.log(`Created task ${taskId}`);
   console.log(`State: ready`);
   console.log(`Branch: ${branchName}`);

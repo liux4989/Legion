@@ -33,12 +33,29 @@ The project ships a `.codex/config.toml` that registers the notify hook. Your co
 trust_level = "trusted"
 ```
 
+To reuse one Legion install across multiple local projects on macOS, register each git project once:
+
+```bash
+legion projects add app-one /absolute/path/to/app-one
+legion projects add app-two /absolute/path/to/app-two
+```
+
+Registrations are stored locally at `~/Library/Application Support/Legion/projects.json`.
+
 ## Usage
 
 Create a task:
 
 ```bash
 legion create "Fix race condition in session cleanup"
+```
+
+If you are outside the target repo, or you have multiple registered projects, select it explicitly:
+
+```bash
+legion create --project app-one "Fix race condition in session cleanup"
+legion run --project app-one <task-id>
+legion pr --project app-one <task-id>
 ```
 
 `create` runs two Codex passes:
