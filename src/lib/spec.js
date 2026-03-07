@@ -31,11 +31,14 @@ function normalizeOptionalList(values) {
 export function buildIntentBriefPrompt(intent, taskId) {
   return `Create an Intent Brief for Legion task ${taskId}.
 
-User request:
+## Source Input
 ${intent}
 
-Requirements:
+## Goal
+- Normalize the user request into a concise execution brief.
 - Preserve the original request in normalized form.
+
+## Constraints
 - Keep the brief deterministic, structural, and execution-oriented.
 - Do not broaden scope or add new product behavior.
 - Keep every field concise.
