@@ -9,6 +9,7 @@ Legion is a minimal prototype orchestrator for coding tasks. It implements an `I
 - Spec creation: Codex-generated `Intent Brief` then final spec issue
 - PR creation: explicit `pr` command after review passes
 - Auto-exit: passes a codex `notify` hook at launch time to detect turn completion and auto-advance phases
+- Auto-exit: passes a codex `notify` hook at launch time to detect turn completion and auto-advance phases
 
 ## Requirements
 
@@ -34,7 +35,6 @@ legion projects add app-two /absolute/path/to/app-two
 ```
 
 Registrations are stored locally at `~/Library/Application Support/Legion/projects.json`.
-
 ## Usage
 
 Create a task:
