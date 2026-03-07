@@ -62,12 +62,12 @@ function describeSchemaNode(node) {
   throw new Error(`Unsupported schema node type: ${node.type}`);
 }
 
-function buildJsonFormatInstructions(schema) {
+function buildJsonFieldInstructions(schema) {
   if (!schema || schema.type !== "object" || !schema.properties || !Array.isArray(schema.required)) {
     throw new Error("Schema must be an object schema with properties and required fields.");
   }
 
-  const lines = ["Return JSON only.", "Use exactly these top-level fields:"];
+  const lines = ["Use exactly these top-level fields:"];
 
   for (const key of schema.required) {
     const propertySchema = schema.properties[key];
@@ -124,7 +124,8 @@ export async function generateObjectWithCodex({ repoRoot, prompt, schema, prefix
   const inlinePrompt = appendJsonFileInstructions(
     `${prompt}
 
-${buildJsonFormatInstructions(schema)}`,
+When you write the approved final JSON file, follow this format:
+${buildJsonFieldInstructions(schema)}`,
     outputFile,
   );
 
@@ -162,7 +163,8 @@ ${buildJsonFormatInstructions(schema)}`,
 export async function generateObjectWithCodexExec({ repoRoot, prompt, schema }) {
   const inlinePrompt = `${prompt}
 
-${buildJsonFormatInstructions(schema)}`;
+Return JSON only.
+${buildJsonFieldInstructions(schema)}`;
   const result = runExecCodex(repoRoot, inlinePrompt);
 
   if (!result.ok) {
