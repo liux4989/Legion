@@ -8,7 +8,7 @@ Legion is a minimal prototype orchestrator for coding tasks. It implements an `I
 - Isolation: git branches
 - Spec creation: Codex-generated `Intent Brief` then final spec issue
 - PR creation: explicit `pr` command after review passes
-- Auto-exit: uses codex `notify` hook to detect turn completion and auto-advance phases
+- Auto-exit: passes a codex `notify` hook at launch time to detect turn completion and auto-advance phases
 
 ## Requirements
 
@@ -24,13 +24,6 @@ Install locally:
 
 ```bash
 npm link
-```
-
-The project ships a `.codex/config.toml` that registers the notify hook. Your codex user config (`~/.codex/config.toml`) must trust the project:
-
-```toml
-[projects."/path/to/Legion"]
-trust_level = "trusted"
 ```
 
 To reuse one Legion install across multiple local projects on macOS, register each git project once:

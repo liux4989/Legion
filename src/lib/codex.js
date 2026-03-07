@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { runCommand, runCommandInteractive, runCommandInheritAsync } from "./shell.js";
+
+const LEGION_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const NOTIFY_HOOK = path.join(LEGION_ROOT, "bin", "legion-notify");
 
 function tmpFile(prefix, extension) {
   return path.join(os.tmpdir(), `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}.${extension}`);
@@ -16,7 +20,7 @@ function buildInteractiveArgs(prompt) {
     ? process.env.LEGION_CODEX_ARGS.trim().split(/\s+/)
     : [];
 
-  return ["--no-alt-screen", ...extraArgs, prompt];
+  return ["--no-alt-screen", "-c", `notify=[${JSON.stringify(NOTIFY_HOOK)}]`, ...extraArgs, prompt];
 }
 
 function buildExecArgs(prompt) {
