@@ -4,14 +4,14 @@ import { saveTask } from "./tasks.js";
 
 const TASK_TRANSITIONS = {
   ready: {
-    start_execution: "executing",
+    start_fixing: "fixing",
   },
-  executing: {
-    execution_succeeded: "reviewing",
+  fixing: {
+    fixing_succeeded: "reviewing",
   },
   reviewing: {
     review_passed: "pr_ready",
-    review_failed: "executing",
+    review_failed: "fixing",
   },
   pr_ready: {},
   done: {},

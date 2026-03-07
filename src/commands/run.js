@@ -68,7 +68,7 @@ function validateReviewShape(review) {
 
 async function executePhase(root, task) {
   if (task.state === "ready") {
-    transitionTask(task, "start_execution");
+    transitionTask(task, "start_fixing");
   }
   task.lastError = null;
   saveTask(root, task);
@@ -90,7 +90,7 @@ async function executePhase(root, task) {
   task.latestRunSummary = result.summary;
   task.latestReviewFeedback = null;
   task.latestReviewSummary = null;
-  transitionTask(task, "execution_succeeded");
+  transitionTask(task, "fixing_succeeded");
   task.lastError = null;
   saveTask(root, task);
   console.log(`\n── execute done ── state: reviewing`);
@@ -156,7 +156,7 @@ export async function runTask(args) {
   }
 
   let task = loadTask(root, taskId);
-  assertTaskState(task, ["ready", "executing", "reviewing"], "run");
+  assertTaskState(task, ["ready", "fixing", "reviewing"], "run");
 
   const activeBranch = currentBranch(root);
   if (activeBranch !== task.branchName) {
@@ -169,7 +169,7 @@ export async function runTask(args) {
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     task = loadTask(root, taskId);
 
-    if (task.state === "ready" || task.state === "executing") {
+    if (task.state === "ready" || task.state === "fixing") {
       if (!await executePhase(root, task)) break;
       task = loadTask(root, taskId);
     }

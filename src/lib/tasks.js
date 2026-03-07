@@ -5,7 +5,7 @@ import { CliError } from "./errors.js";
 
 export const TASK_STATES = new Set([
   "ready",
-  "executing",
+  "fixing",
   "reviewing",
   "pr_ready",
   "done",
@@ -48,6 +48,10 @@ export function loadTask(repoRoot, taskId) {
   }
 
   const task = readJson(filePath);
+
+  if (task.state === "executing") {
+    task.state = "fixing";
+  }
 
   if (!task.spec && exists(legacySpecFile(repoRoot, taskId))) {
     task.spec = readText(legacySpecFile(repoRoot, taskId));
