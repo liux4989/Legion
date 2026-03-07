@@ -39,6 +39,50 @@ Rules for that file:
 - Ensure the file exists before you exit.`;
 }
 
+function describeSchemaNode(node) {
+  if (!node || typeof node !== "object") {
+    throw new Error("Invalid schema node.");
+  }
+
+  if (node.type === "string") {
+    return "string";
+  }
+
+  if (node.type === "array") {
+    const itemType = describeSchemaNode(node.items);
+    const minItems = typeof node.minItems === "number" ? `, min ${node.minItems}` : "";
+    const maxItems = typeof node.maxItems === "number" ? `, max ${node.maxItems}` : "";
+    return `array of ${itemType}${minItems}${maxItems}`;
+  }
+
+  if (node.type === "object") {
+    return "object";
+  }
+
+  throw new Error(`Unsupported schema node type: ${node.type}`);
+}
+
+function buildJsonFormatInstructions(schema) {
+  if (!schema || schema.type !== "object" || !schema.properties || !Array.isArray(schema.required)) {
+    throw new Error("Schema must be an object schema with properties and required fields.");
+  }
+
+  const lines = ["Return JSON only.", "Use exactly these top-level fields:"];
+
+  for (const key of schema.required) {
+    const propertySchema = schema.properties[key];
+
+    if (!propertySchema) {
+      throw new Error(`Schema is missing property definition for required field: ${key}`);
+    }
+
+    lines.push(`- ${key}: ${describeSchemaNode(propertySchema)}`);
+  }
+
+  lines.push("- Do not include extra fields.");
+  return lines.join("\n");
+}
+
 function runInlineCodex(repoRoot, prompt) {
   const result = runCommandInteractive("codex", buildInteractiveArgs(prompt), {
     cwd: repoRoot,
@@ -80,8 +124,7 @@ export async function generateObjectWithCodex({ repoRoot, prompt, schema, prefix
   const inlinePrompt = appendJsonFileInstructions(
     `${prompt}
 
-JSON schema:
-${JSON.stringify(schema, null, 2)}`,
+${buildJsonFormatInstructions(schema)}`,
     outputFile,
   );
 
@@ -119,10 +162,7 @@ ${JSON.stringify(schema, null, 2)}`,
 export async function generateObjectWithCodexExec({ repoRoot, prompt, schema }) {
   const inlinePrompt = `${prompt}
 
-Return JSON only using the provided schema.
-
-JSON schema:
-${JSON.stringify(schema, null, 2)}`;
+${buildJsonFormatInstructions(schema)}`;
   const result = runExecCodex(repoRoot, inlinePrompt);
 
   if (!result.ok) {
