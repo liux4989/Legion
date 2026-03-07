@@ -193,6 +193,11 @@ export function resolveProjectContext(projectRef, cwd = process.cwd()) {
   try {
     const root = canonicalProjectRoot(cwd);
     const registered = registry.projects.find((project) => project.path === root);
+
+    if (registry.projects.length > 1 && !registered) {
+      throw new CliError("Multiple local projects are registered. Re-run with --project <name>.");
+    }
+
     return {
       root,
       name: registered?.name ?? path.basename(root),
