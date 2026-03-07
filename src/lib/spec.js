@@ -129,17 +129,17 @@ ${unknowns}
 export function buildSpecPrompt(intentBrief, taskId) {
   return `Create a spec draft for Legion task ${taskId} from this Intent Brief.
 
-Source of truth:
+## Source Of Truth
 ${renderIntentBriefContext(intentBrief)}
 
-Process:
+## Interaction Flow
 - Work interactively with the user in the terminal before finalizing the spec.
 - First present the draft for review as markdown, not JSON.
-- Keep that markdown aligned to the final spec structure: Title, Goal, Scope, Non-goals, User-visible behavior, Requirements, Edge cases, Dependencies / assumptions, Success Criteria, and Implementation notes.
+- Use this markdown structure: Title, Goal, Scope, Non-goals, User-visible behavior, Requirements, Edge cases, Dependencies / assumptions, Success Criteria, and Implementation notes.
 - Refine the markdown draft from user feedback and ask for explicit approval.
 - Do not write the final JSON output file until the user explicitly approves the spec.
 
-Scope rules:
+## Scope Rules
 - Preserve the original intent and core user value.
 - Do not broaden scope.
 - Prefer the smallest complete unit of user value.
@@ -151,7 +151,7 @@ Scope rules:
 - Avoid implementation detail unless it removes ambiguity or prevents repeated failure.
 - Do not mention tests unless the request explicitly requires them.
 
-Writing style:
+## Writing Style
 - Keep the spec concise, concrete, and execution-oriented.
 - Prefer short bullets over dense paragraphs.
 - Use concrete, observable wording.

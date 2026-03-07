@@ -124,7 +124,8 @@ export async function generateObjectWithCodex({ repoRoot, prompt, schema, prefix
   const inlinePrompt = appendJsonFileInstructions(
     `${prompt}
 
-When you write the approved final JSON file, follow this format:
+## Final JSON Output
+Only after the user explicitly approves the spec, write the final JSON file using this format:
 ${buildJsonFieldInstructions(schema)}`,
     outputFile,
   );
