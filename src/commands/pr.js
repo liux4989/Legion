@@ -1,16 +1,20 @@
 import { createOrUpdatePr } from "../lib/pr.js";
-import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, pushBranch, remoteName, repoRoot, workingTreeHasChanges } from "../lib/git.js";
+import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, pushBranch, remoteName, workingTreeHasChanges } from "../lib/git.js";
 import { loadTask, saveTask } from "../lib/tasks.js";
 import { assertTaskState, recordError, clearError, prBody, prTitle } from "../lib/workflow.js";
 import { CliError } from "../lib/errors.js";
+import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
 
 export async function prTask(args) {
-  const taskId = args[0];
-  const root = repoRoot();
+  const parsed = parseProjectArgs(args);
+  const taskId = parsed.args[0];
 
   if (!taskId) {
-    throw new CliError("Usage: legion pr <task-id>");
+    throw new CliError("Usage: legion pr [--project <name|path>] <task-id>");
   }
+
+  const project = resolveProjectContext(parsed.projectRef);
+  const root = project.root;
 
   const task = loadTask(root, taskId);
   assertTaskState(task, ["pr_ready"], "open PR for");
@@ -22,6 +26,8 @@ export async function prTask(args) {
   }
 
   try {
+    console.log(`Project: ${project.name} (${project.path})`);
+
     if (workingTreeHasChanges(root)) {
       commitAll(root, `task(${task.id}): ${task.intent}`);
     }

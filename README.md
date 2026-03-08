@@ -8,7 +8,7 @@ Legion is a minimal prototype orchestrator for coding tasks. It implements an `I
 - Isolation: git branches
 - Spec creation: Codex-generated `Intent Brief` then final spec issue
 - PR creation: explicit `pr` command after review passes
-- Auto-exit: uses codex `notify` hook to detect turn completion and auto-advance phases
+- Auto-exit: passes a codex `notify` hook at launch time to detect turn completion and auto-advance phases
 
 ## Requirements
 
@@ -26,12 +26,14 @@ Install locally:
 npm link
 ```
 
-The project ships a `.codex/config.toml` that registers the notify hook. Your codex user config (`~/.codex/config.toml`) must trust the project:
+To reuse one Legion install across multiple local projects on macOS, register each git project once:
 
-```toml
-[projects."/path/to/Legion"]
-trust_level = "trusted"
+```bash
+legion projects add app-one /absolute/path/to/app-one
+legion projects add app-two /absolute/path/to/app-two
 ```
+
+Registrations are stored locally at `~/Library/Application Support/Legion/projects.json`.
 
 ## Usage
 
@@ -39,6 +41,14 @@ Create a task:
 
 ```bash
 legion create "Fix race condition in session cleanup"
+```
+
+If you are outside the target repo, or you have multiple registered projects, select it explicitly:
+
+```bash
+legion create --project app-one "Fix race condition in session cleanup"
+legion run --project app-one <task-id>
+legion pr --project app-one <task-id>
 ```
 
 `create` runs two Codex passes:
@@ -84,12 +94,9 @@ tasks/
   - `Goal`
   - `Scope`
   - `Non-goals`
-  - `User-visible behavior`
   - `Requirements`
-  - `Edge cases`
-  - `Dependencies / assumptions`
   - `Success criteria`
-  - `Implementation notes`
+  - `Notes`
 - `run` launches codex with `--full-auto` and auto-advances through execute→review→fix phases without manual intervention.
 - The user can interact with codex during execution (it runs inline with `stdio: "inherit"`). Ctrl-C aborts the loop.
 - Review findings are fed back to codex as fix instructions on the next iteration.

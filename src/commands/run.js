@@ -1,8 +1,9 @@
 import { loadTask, saveTask } from "../lib/tasks.js";
 import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js";
-import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, repoRoot, workingTreeHasChanges } from "../lib/git.js";
+import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, workingTreeHasChanges } from "../lib/git.js";
 import { runCodexTaskAutoExit, reviewWithCodexAutoExit } from "../lib/codex.js";
 import { CliError } from "../lib/errors.js";
+import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
 
 const MAX_ITERATIONS = 3;
 
@@ -148,12 +149,15 @@ async function reviewPhase(root, task) {
 }
 
 export async function runTask(args) {
-  const taskId = args[0];
-  const root = repoRoot();
+  const parsed = parseProjectArgs(args);
+  const taskId = parsed.args[0];
 
   if (!taskId) {
-    throw new CliError("Usage: legion run <task-id>");
+    throw new CliError("Usage: legion run [--project <name|path>] <task-id>");
   }
+
+  const project = resolveProjectContext(parsed.projectRef);
+  const root = project.root;
 
   let task = loadTask(root, taskId);
   assertTaskState(task, ["ready", "fixing", "reviewing"], "run");
@@ -164,6 +168,7 @@ export async function runTask(args) {
     checkoutBranch(root, task.branchName, task.baseBranch);
   }
 
+  console.log(`Project: ${project.name} (${project.path})`);
   console.log(`Starting autonomous loop for ${task.id} (max ${MAX_ITERATIONS} iterations, Ctrl-C to stop)`);
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
