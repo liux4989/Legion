@@ -138,7 +138,7 @@ ${renderIntentBriefContext(intentBrief)}
 ## Interaction Flow
 - Work interactively with the user in the terminal before finalizing the spec.
 - First present the draft for review as markdown, not JSON.
-- Use this markdown structure: Title, Goal, Scope, Non-goals, User-visible behavior, Requirements, Edge cases, Dependencies / assumptions, Success Criteria, and Implementation notes.
+- Use this markdown structure: Title, Goal, Scope, Non-goals, Requirements, Success Criteria, and Notes.
 - Refine the markdown draft from user feedback and ask for explicit approval.
 - Do not write the final JSON output file until the user explicitly approves the spec.
 
@@ -149,9 +149,9 @@ ${renderIntentBriefContext(intentBrief)}
 - Do not introduce new product behavior unless it is required to make the request executable.
 - When ambiguity exists, resolve it conservatively, record it as an explicit assumption, or move it to non-goals.
 - Separate in-scope work from non-goals clearly.
-- Convert vague behavior into observable requirements.
+- Convert vague behavior, user-visible outcomes, and edge cases into observable requirements.
 - Define success criteria that a reviewer can validate quickly.
-- Avoid implementation detail unless it removes ambiguity or prevents repeated failure.
+- Use Notes only for assumptions or implementation detail that removes ambiguity or prevents repeated failure.
 - Do not mention tests unless the request explicitly requires them.
 
 ## Writing Style
@@ -159,6 +159,7 @@ ${renderIntentBriefContext(intentBrief)}
 - Prefer short bullets over dense paragraphs.
 - Use concrete, observable wording.
 - Avoid filler, repetition, and generic engineering advice.
+- Do not duplicate the same idea across sections.
 - If a section has no meaningful content, return an empty list.
 `;
 }
@@ -184,12 +185,9 @@ export function validateSpecDraft(draft) {
     goal,
     scope: normalizeList(draft.scope, "Scope"),
     nonGoals: normalizeOptionalList(draft.nonGoals),
-    userVisibleBehavior: normalizeOptionalList(draft.userVisibleBehavior),
     requirements: normalizeList(draft.requirements, "Requirements"),
-    edgeCases: normalizeOptionalList(draft.edgeCases),
-    dependenciesAssumptions: normalizeOptionalList(draft.dependenciesAssumptions),
     successCriteria: normalizeList(draft.successCriteria, "Success Criteria"),
-    implementationNotes: normalizeOptionalList(draft.implementationNotes),
+    notes: normalizeOptionalList(draft.notes),
   };
 }
 
@@ -202,12 +200,9 @@ export function specOutputSchema() {
       "goal",
       "scope",
       "nonGoals",
-      "userVisibleBehavior",
       "requirements",
-      "edgeCases",
-      "dependenciesAssumptions",
       "successCriteria",
-      "implementationNotes",
+      "notes",
     ],
     properties: {
       title: { type: "string", minLength: 1 },
@@ -224,27 +219,9 @@ export function specOutputSchema() {
         maxItems: 8,
         items: { type: "string", minLength: 1 },
       },
-      userVisibleBehavior: {
-        type: "array",
-        minItems: 0,
-        maxItems: 8,
-        items: { type: "string", minLength: 1 },
-      },
       requirements: {
         type: "array",
         minItems: 1,
-        maxItems: 8,
-        items: { type: "string", minLength: 1 },
-      },
-      edgeCases: {
-        type: "array",
-        minItems: 0,
-        maxItems: 8,
-        items: { type: "string", minLength: 1 },
-      },
-      dependenciesAssumptions: {
-        type: "array",
-        minItems: 0,
         maxItems: 8,
         items: { type: "string", minLength: 1 },
       },
@@ -254,7 +231,7 @@ export function specOutputSchema() {
         maxItems: 8,
         items: { type: "string", minLength: 1 },
       },
-      implementationNotes: {
+      notes: {
         type: "array",
         minItems: 0,
         maxItems: 8,
@@ -278,24 +255,12 @@ export function renderSpec(taskId, draft) {
     sections.push(`## Non-goals\n\n${renderList(spec.nonGoals)}`);
   }
 
-  if (spec.userVisibleBehavior.length > 0) {
-    sections.push(`## User-visible behavior\n\n${renderList(spec.userVisibleBehavior)}`);
-  }
-
   sections.push(`## Requirements\n\n${renderList(spec.requirements)}`);
-
-  if (spec.edgeCases.length > 0) {
-    sections.push(`## Edge cases\n\n${renderList(spec.edgeCases)}`);
-  }
-
-  if (spec.dependenciesAssumptions.length > 0) {
-    sections.push(`## Dependencies / assumptions\n\n${renderList(spec.dependenciesAssumptions)}`);
-  }
 
   sections.push(`## Success Criteria\n\n${renderList(spec.successCriteria)}`);
 
-  if (spec.implementationNotes.length > 0) {
-    sections.push(`## Implementation notes\n\n${renderList(spec.implementationNotes)}`);
+  if (spec.notes.length > 0) {
+    sections.push(`## Notes\n\n${renderList(spec.notes)}`);
   }
 
   return `${sections.join("\n\n")}\n`;

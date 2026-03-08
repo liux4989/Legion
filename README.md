@@ -94,12 +94,9 @@ tasks/
   - `Goal`
   - `Scope`
   - `Non-goals`
-  - `User-visible behavior`
   - `Requirements`
-  - `Edge cases`
-  - `Dependencies / assumptions`
   - `Success criteria`
-  - `Implementation notes`
+  - `Notes`
 - `run` launches codex with `--full-auto` and auto-advances through execute→review→fix phases without manual intervention.
 - The user can interact with codex during execution (it runs inline with `stdio: "inherit"`). Ctrl-C aborts the loop.
 - Review findings are fed back to codex as fix instructions on the next iteration.
