@@ -168,29 +168,4 @@ export async function runCodexTaskAutoExit({ repoRoot, prompt }) {
   };
 }
 
-export async function reviewWithCodexMarkdown({ repoRoot, prompt }) {
-  const outputFile = tmpFile("legion-review", "md");
-  const inlinePrompt = appendTextFileInstructions(prompt, outputFile, "markdown");
 
-  try {
-    const result = await runCodexAutoExit(repoRoot, inlinePrompt);
-
-    if (!result.ok) {
-      return result;
-    }
-
-    if (!fs.existsSync(outputFile)) {
-      return {
-        ok: false,
-        error: `Codex did not write the expected review file: ${outputFile}`,
-      };
-    }
-
-    return {
-      ok: true,
-      value: readTextFile(outputFile),
-    };
-  } finally {
-    fs.rmSync(outputFile, { force: true });
-  }
-}

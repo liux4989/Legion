@@ -1,7 +1,7 @@
-import { loadTask, saveTask, specFile, appendTrajectoryEntry, latestTrajectoryEntry } from "../lib/tasks.js";
+import { loadTask, saveTask, specFile, appendTrajectoryEntry, latestTrajectoryEntry, trajectoryFile } from "../lib/tasks.js";
 import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js";
 import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, workingTreeHasChanges } from "../lib/git.js";
-import { runCodexTaskAutoExit, reviewWithCodexMarkdown } from "../lib/codex.js";
+import { runCodexTaskAutoExit } from "../lib/codex.js";
 import { CliError } from "../lib/errors.js";
 import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
 
@@ -23,7 +23,8 @@ Do not broaden scope beyond the spec.
 ${feedback}`;
 }
 
-function buildReviewPrompt(root, task) {
+function buildReviewPrompt(root, task, iteration) {
+  const trajFile = trajectoryFile(root, task.id);
   return `Review task ${task.id} against the spec file at: ${specFile(root, task.id)}
 
 Use git to compare the current branch against base branch ${task.baseBranch}.
@@ -36,36 +37,15 @@ Only check:
 
 Do not request unrelated refactors or broader product changes.
 
-Write your review in this exact format:
+When done, append exactly one JSON line to: ${trajFile}
 
-DECISION: pass|fail
+The line must be valid JSON matching this schema (no extra keys, no wrapping):
+{"iteration":${iteration},"phase":"review","decision":"pass|fail","summary":"<one paragraph>","findings":[{"severity":"...","title":"...","file":"...","detail":"..."}],"feedback":"<summary + findings text if decision is fail, otherwise null>"}
 
-SUMMARY: <one paragraph explaining the review outcome>
-
-FINDINGS:
-- [severity] title (file/path): detail`;
-}
-
-function parseReviewMarkdown(text) {
-  const decisionMatch = text.match(/^DECISION:\s*(pass|fail)\s*$/m);
-  if (!decisionMatch) {
-    throw new CliError('Review output must include a "DECISION: pass" or "DECISION: fail" line.');
-  }
-
-  const summaryMatch = text.match(/^SUMMARY:\s*(.+)$/m);
-  if (!summaryMatch || !summaryMatch[1].trim()) {
-    throw new CliError("Review output must include a non-empty SUMMARY line.");
-  }
-
-  const findings = [];
-  const findingsSection = text.split(/^FINDINGS:\s*$/m)[1];
-  if (findingsSection) {
-    for (const match of findingsSection.matchAll(/^- \[(\w+)\]\s+(.+?)(?:\s+\(([^)]+)\))?:\s*(.+)$/gm)) {
-      findings.push({ severity: match[1], title: match[2], file: match[3] || null, detail: match[4] });
-    }
-  }
-
-  return { decision: decisionMatch[1], summary: summaryMatch[1].trim(), findings };
+Rules:
+- Append only; do not modify existing content.
+- One JSON object per line, no trailing comma.
+- Ensure the file exists after you finish.`;
 }
 
 async function executePhase(root, task, iteration) {
@@ -107,9 +87,9 @@ async function reviewPhase(root, task, iteration) {
     return false;
   }
 
-  const result = await reviewWithCodexMarkdown({
+  const result = await runCodexTaskAutoExit({
     repoRoot: root,
-    prompt: buildReviewPrompt(root, task),
+    prompt: buildReviewPrompt(root, task, iteration),
   });
 
   if (!result.ok) {
@@ -117,33 +97,16 @@ async function reviewPhase(root, task, iteration) {
     return false;
   }
 
-  let review;
-  try {
-    review = parseReviewMarkdown(result.value);
-  } catch (error) {
-    recordError(root, task, error);
+  const review = latestTrajectoryEntry(root, task.id, "review");
+  if (!review || review.iteration !== iteration) {
+    recordError(root, task, "Codex did not append a review entry to the trajectory file.");
     return false;
   }
 
-  const findingsText = review.findings
-    .map((f, i) => {
-      const loc = f.file ? ` (${f.file})` : "";
-      return `${i + 1}. [${f.severity}] ${f.title}${loc}\n${f.detail}`;
-    })
-    .join("\n\n");
-
-  const feedback = review.decision === "fail"
-    ? `${review.summary}\n\n${findingsText}`
-    : null;
-
-  appendTrajectoryEntry(root, task.id, {
-    iteration,
-    phase: "review",
-    decision: review.decision,
-    summary: review.summary,
-    findings: review.findings,
-    feedback,
-  });
+  if (review.decision !== "pass" && review.decision !== "fail") {
+    recordError(root, task, `Invalid review decision: ${review.decision}`);
+    return false;
+  }
 
   if (review.decision === "pass") {
     transitionTask(task, "review_passed");
