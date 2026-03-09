@@ -7,22 +7,19 @@ import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
 
 const MAX_ITERATIONS = 3;
 
-function buildRunPrompt(task) {
+function buildRunPrompt(root, task) {
   const feedback = task.latestReviewFeedback
     ? `\nReview feedback to address before you finish:\n${task.latestReviewFeedback}\n`
     : "";
 
   return `You are working on Legion task ${task.id}.
 
-Read the task spec at: tasks/task_${task.id}/spec.md
+Read the task spec at: ${specFile(root, task.id)}
+
 Inspect the repository, implement the requested change, and run relevant checks.
 
 Do not broaden scope beyond the spec.
-${feedback}
-When you are done, summarize:
-- what changed
-- what checks ran
-- any remaining caveats`;
+${feedback}`;
 }
 
 function buildReviewPrompt(root, task) {
@@ -79,7 +76,7 @@ async function executePhase(root, task) {
 
   const result = await runCodexTaskAutoExit({
     repoRoot: root,
-    prompt: buildRunPrompt(task),
+    prompt: buildRunPrompt(root, task),
   });
 
   if (!result.ok) {

@@ -168,9 +168,9 @@ export async function runCodexTaskAutoExit({ repoRoot, prompt }) {
   };
 }
 
-export async function reviewWithCodexAutoExit({ repoRoot, prompt }) {
-  const outputFile = tmpFile("legion-review", "json");
-  const inlinePrompt = appendJsonFileInstructions(prompt, outputFile);
+export async function reviewWithCodexMarkdown({ repoRoot, prompt }) {
+  const outputFile = tmpFile("legion-review", "md");
+  const inlinePrompt = appendTextFileInstructions(prompt, outputFile, "markdown");
 
   try {
     const result = await runCodexAutoExit(repoRoot, inlinePrompt);
@@ -186,18 +186,10 @@ export async function reviewWithCodexAutoExit({ repoRoot, prompt }) {
       };
     }
 
-    try {
-      return {
-        ok: true,
-        review: readJsonFile(outputFile),
-      };
-    } catch (error) {
-      return {
-        ok: false,
-        error: `Review output was not valid JSON in ${outputFile}`,
-        cause: error,
-      };
-    }
+    return {
+      ok: true,
+      value: readTextFile(outputFile),
+    };
   } finally {
     fs.rmSync(outputFile, { force: true });
   }
