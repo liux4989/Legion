@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { runCommand, runCommandInteractive, runCommandInheritAsync } from "./shell.js";
+import { runCommandInteractive, runCommandInheritAsync } from "./shell.js";
 
 const LEGION_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const NOTIFY_HOOK = path.join(LEGION_ROOT, "bin", "legion-notify");
@@ -25,14 +25,6 @@ function buildInteractiveArgs(prompt) {
     : [];
 
   return ["--no-alt-screen", "-c", `notify=[${JSON.stringify(NOTIFY_HOOK)}]`, ...extraArgs, prompt];
-}
-
-function buildExecArgs(prompt) {
-  const extraArgs = process.env.LEGION_CODEX_ARGS?.trim()
-    ? process.env.LEGION_CODEX_ARGS.trim().split(/\s+/)
-    : [];
-
-  return ["exec", ...extraArgs, prompt];
 }
 
 function appendJsonFileInstructions(prompt, outputFile) {
@@ -58,50 +50,6 @@ Rules for that file:
 - Ensure the file exists before you exit.`;
 }
 
-function describeSchemaNode(node) {
-  if (!node || typeof node !== "object") {
-    throw new Error("Invalid schema node.");
-  }
-
-  if (node.type === "string") {
-    return "string";
-  }
-
-  if (node.type === "array") {
-    const itemType = describeSchemaNode(node.items);
-    const minItems = typeof node.minItems === "number" ? `, min ${node.minItems}` : "";
-    const maxItems = typeof node.maxItems === "number" ? `, max ${node.maxItems}` : "";
-    return `array of ${itemType}${minItems}${maxItems}`;
-  }
-
-  if (node.type === "object") {
-    return "object";
-  }
-
-  throw new Error(`Unsupported schema node type: ${node.type}`);
-}
-
-function buildJsonFieldInstructions(schema) {
-  if (!schema || schema.type !== "object" || !schema.properties || !Array.isArray(schema.required)) {
-    throw new Error("Schema must be an object schema with properties and required fields.");
-  }
-
-  const lines = ["Use exactly these top-level fields:"];
-
-  for (const key of schema.required) {
-    const propertySchema = schema.properties[key];
-
-    if (!propertySchema) {
-      throw new Error(`Schema is missing property definition for required field: ${key}`);
-    }
-
-    lines.push(`- ${key}: ${describeSchemaNode(propertySchema)}`);
-  }
-
-  lines.push("- Do not include extra fields.");
-  return lines.join("\n");
-}
-
 function runInlineCodex(repoRoot, prompt) {
   const result = runCommandInteractive("codex", buildInteractiveArgs(prompt), {
     cwd: repoRoot,
@@ -116,68 +64,6 @@ function runInlineCodex(repoRoot, prompt) {
   }
 
   return { ok: true };
-}
-
-function runExecCodex(repoRoot, prompt) {
-  const result = runCommand("codex", buildExecArgs(prompt), {
-    cwd: repoRoot,
-    allowFailure: true,
-  });
-
-  if (result.status !== 0) {
-    const details = result.stderr.trim() || result.stdout.trim();
-    return {
-      ok: false,
-      error: details || `Codex exited with code ${result.status}`,
-    };
-  }
-
-  return {
-    ok: true,
-    output: result.stdout.trim(),
-  };
-}
-
-export async function generateObjectWithCodex({ repoRoot, prompt, schema, prefix = "legion" }) {
-  const outputFile = tmpFile(prefix, "json");
-  const inlinePrompt = appendJsonFileInstructions(
-    `${prompt}
-
-## Final JSON Output
-Only after the user explicitly approves the spec, write the final JSON file using this format:
-${buildJsonFieldInstructions(schema)}`,
-    outputFile,
-  );
-
-  try {
-    const result = runInlineCodex(repoRoot, inlinePrompt);
-
-    if (!result.ok) {
-      return result;
-    }
-
-    if (!fs.existsSync(outputFile)) {
-      return {
-        ok: false,
-        error: `Codex did not write the expected JSON output file: ${outputFile}`,
-      };
-    }
-
-    try {
-      return {
-        ok: true,
-        value: readJsonFile(outputFile),
-      };
-    } catch (error) {
-      return {
-        ok: false,
-        error: `Codex output was not valid JSON in ${outputFile}`,
-        cause: error,
-      };
-    }
-  } finally {
-    fs.rmSync(outputFile, { force: true });
-  }
 }
 
 export async function generateTextWithCodex({ repoRoot, prompt, prefix = "legion", extension = "md", formatLabel = "markdown" }) {
@@ -204,31 +90,6 @@ export async function generateTextWithCodex({ repoRoot, prompt, prefix = "legion
     };
   } finally {
     fs.rmSync(outputFile, { force: true });
-  }
-}
-
-export async function generateObjectWithCodexExec({ repoRoot, prompt, schema }) {
-  const inlinePrompt = `${prompt}
-
-Return JSON only.
-${buildJsonFieldInstructions(schema)}`;
-  const result = runExecCodex(repoRoot, inlinePrompt);
-
-  if (!result.ok) {
-    return result;
-  }
-
-  try {
-    return {
-      ok: true,
-      value: JSON.parse(result.output),
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      error: "Codex output was not valid JSON.",
-      cause: error,
-    };
   }
 }
 
