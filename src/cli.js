@@ -1,17 +1,14 @@
 import { createTask } from "./commands/create.js";
 import { runTask } from "./commands/run.js";
 import { prTask } from "./commands/pr.js";
-import { manageProjects } from "./commands/projects.js";
 import { CliError, formatError } from "./lib/errors.js";
 
 function usage() {
   return [
     "Usage:",
-    '  legion create [--project <name|path>] "<intent>"',
-    "  legion run [--project <name|path>] <task-id>",
-    "  legion pr [--project <name|path>] <task-id>",
-    "  legion projects add <name> <path>",
-    "  legion projects list",
+    '  legion create "<intent>"',
+    "  legion run <task-id>",
+    "  legion pr <task-id>",
   ].join("\n");
 }
 
@@ -26,8 +23,6 @@ export async function main(argv) {
         return await runTask(rest);
       case "pr":
         return await prTask(rest);
-      case "projects":
-        return manageProjects(rest);
       case "--help":
       case "-h":
       case undefined:

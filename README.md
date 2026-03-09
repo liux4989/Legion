@@ -21,34 +21,26 @@ Legion is a minimal prototype orchestrator for coding tasks. It implements a `Sp
 
 ## Setup
 
-Install locally:
+Install as a project devDependency:
+
+```bash
+npm install --save-dev legion
+```
+
+Or link locally during development:
 
 ```bash
 npm link
 ```
 
-To reuse one Legion install across multiple local projects on macOS, register each git project once:
-
-```bash
-legion projects add app-one /absolute/path/to/app-one
-legion projects add app-two /absolute/path/to/app-two
-```
-
-Registrations are stored locally at `~/Library/Application Support/Legion/projects.json`.
 ## Usage
+
+Run all commands from inside the target git project.
 
 Create a task:
 
 ```bash
 legion create "Fix race condition in session cleanup"
-```
-
-If you are outside the target repo, or you have multiple registered projects, select it explicitly:
-
-```bash
-legion create --project app-one "Fix race condition in session cleanup"
-legion run --project app-one <task-id>
-legion pr --project app-one <task-id>
 ```
 
 `create` runs one inline Codex pass with a staged HIL workflow: structural intent draft and approval first, then spec draft and approval, then final markdown output.

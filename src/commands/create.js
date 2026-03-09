@@ -3,18 +3,17 @@ import { currentBranch } from "../lib/git.js";
 import { createIssue, issueBody, issueTitle } from "../lib/issues.js";
 import { createTaskRecord, makeTaskId, saveTask } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
-import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
+import { resolveProjectContext } from "../lib/projects.js";
 import { buildCreatePrompt } from "../lib/spec.js";
 
 export async function createTask(args) {
-  const parsed = parseProjectArgs(args);
-  const intent = parsed.args.join(" ").trim();
+  const intent = args.join(" ").trim();
 
   if (!intent) {
-    throw new CliError('Usage: legion create [--project <name|path>] "<intent>"');
+    throw new CliError('Usage: legion create "<intent>"');
   }
 
-  const project = resolveProjectContext(parsed.projectRef);
+  const project = resolveProjectContext();
   const root = project.root;
   const baseBranch = currentBranch(root) || "main";
   const now = new Date().toISOString();

@@ -3,17 +3,16 @@ import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, pushBr
 import { loadTask, saveTask } from "../lib/tasks.js";
 import { assertTaskState, recordError, clearError, prBody, prTitle } from "../lib/workflow.js";
 import { CliError } from "../lib/errors.js";
-import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
+import { resolveProjectContext } from "../lib/projects.js";
 
 export async function prTask(args) {
-  const parsed = parseProjectArgs(args);
-  const taskId = parsed.args[0];
+  const taskId = args[0];
 
   if (!taskId) {
-    throw new CliError("Usage: legion pr [--project <name|path>] <task-id>");
+    throw new CliError("Usage: legion pr <task-id>");
   }
 
-  const project = resolveProjectContext(parsed.projectRef);
+  const project = resolveProjectContext();
   const root = project.root;
 
   const task = loadTask(root, taskId);

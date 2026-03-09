@@ -3,7 +3,7 @@ import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js
 import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, workingTreeHasChanges } from "../lib/git.js";
 import { runCodexTaskAutoExit } from "../lib/codex.js";
 import { CliError } from "../lib/errors.js";
-import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
+import { resolveProjectContext } from "../lib/projects.js";
 
 const MAX_ITERATIONS = 3;
 
@@ -137,14 +137,13 @@ async function reviewPhase(root, task, iteration) {
 }
 
 export async function runTask(args) {
-  const parsed = parseProjectArgs(args);
-  const taskId = parsed.args[0];
+  const taskId = args[0];
 
   if (!taskId) {
-    throw new CliError("Usage: legion run [--project <name|path>] <task-id>");
+    throw new CliError("Usage: legion run <task-id>");
   }
 
-  const project = resolveProjectContext(parsed.projectRef);
+  const project = resolveProjectContext();
   const root = project.root;
 
   let task = loadTask(root, taskId);
