@@ -1,8 +1,7 @@
 import { generateTextWithCodex } from "../lib/codex.js";
 import { currentBranch } from "../lib/git.js";
-import { createTaskRecord, makeTaskId, specFile, taskDir } from "../lib/tasks.js";
+import { createTaskRecord, makeTaskId, saveTask, specFile } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
-import { ensureDir } from "../lib/fs.js";
 import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
 import { buildCreatePrompt } from "../lib/spec.js";
 
@@ -17,22 +16,6 @@ export async function createTask(args) {
   const project = resolveProjectContext(parsed.projectRef);
   const root = project.root;
   const taskId = makeTaskId();
-  const dir = taskDir(root, taskId);
-  const outputFile = specFile(root, taskId);
-  ensureDir(dir);
-
-  const specResult = await generateTextWithCodex({
-    repoRoot: root,
-    prompt: buildCreatePrompt(intent, taskId),
-    prefix: "legion-spec",
-    outputFile,
-  });
-
-  if (!specResult.ok) {
-    throw new CliError(`Failed to generate spec: ${specResult.error}`, { cause: specResult.cause });
-  }
-
-  const spec = `${specResult.value.trim()}\n`;
   const baseBranch = currentBranch(root) || "main";
   const branchName = `task/${taskId}`;
   const now = new Date().toISOString();
@@ -52,7 +35,22 @@ export async function createTask(args) {
     lastError: null,
   };
 
-  createTaskRecord(root, { id: taskId, spec, task });
+  createTaskRecord(root, { id: taskId, spec: "", task });
+
+  const outputFile = specFile(root, taskId);
+  const specResult = await generateTextWithCodex({
+    repoRoot: root,
+    prompt: buildCreatePrompt(intent, taskId),
+    prefix: "legion-spec",
+    outputFile,
+  });
+
+  if (!specResult.ok) {
+    throw new CliError(`Failed to generate spec: ${specResult.error}`, { cause: specResult.cause });
+  }
+
+  const spec = `${specResult.value.trim()}\n`;
+  saveTask(root, { ...task, spec });
 
   console.log(`Project: ${project.name} (${project.path})`);
   console.log(`Created task ${taskId}`);
