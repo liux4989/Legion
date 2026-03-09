@@ -24,13 +24,13 @@ Legion is a minimal prototype orchestrator for coding tasks. It implements a `Sp
 Install as a project devDependency:
 
 ```bash
-npm install --save-dev legion
+pnpm add -D legion
 ```
 
 Or link locally during development:
 
 ```bash
-npm link
+pnpm link --global
 ```
 
 ## Usage
