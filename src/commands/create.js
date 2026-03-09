@@ -3,7 +3,7 @@ import { currentBranch } from "../lib/git.js";
 import { createTaskRecord, makeTaskId } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
 import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
-import { buildCreatePrompt, validateSpecMarkdown } from "../lib/spec.js";
+import { buildCreatePrompt } from "../lib/spec.js";
 
 export async function createTask(args) {
   const parsed = parseProjectArgs(args);
@@ -27,7 +27,7 @@ export async function createTask(args) {
     throw new CliError(`Failed to generate spec: ${specResult.error}`, { cause: specResult.cause });
   }
 
-  const spec = validateSpecMarkdown(specResult.value, taskId);
+  const spec = `${specResult.value.trim()}\n`;
   const baseBranch = currentBranch(root) || "main";
   const branchName = `task/${taskId}`;
   const now = new Date().toISOString();

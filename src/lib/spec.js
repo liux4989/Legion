@@ -1,9 +1,3 @@
-import { CliError } from "./errors.js";
-
-function normalizeSpec(text) {
-  return String(text ?? "").trim();
-}
-
 export function buildCreatePrompt(intent, taskId) {
   return `Turn the user request into an executable markdown spec for Legion task ${taskId}.
 
@@ -34,14 +28,7 @@ ${intent.trim()}
 </Stage1 format>
 
 <Stage2 format>
-- Start with: # [Tag] Short task focus
-- Then include: Task ID: ${taskId}
-- Include a section: ## Summary
-- Include at least one section: ## User Story 1
-- Under each user story include:
-  - ### System Behaviors (EARS)
-  - ### Functional Requirements
-- Include ### Edge Cases when relevant
+- List user stories.
 </Stage2 format>
 
 <interaction>
@@ -52,38 +39,4 @@ ${intent.trim()}
 - Do not write JSON.
 </interaction>
 `;
-}
-
-export function validateSpecMarkdown(markdown, taskId) {
-  const spec = normalizeSpec(markdown);
-
-  if (!spec) {
-    throw new CliError("Generated spec is empty.");
-  }
-
-  if (!spec.startsWith("# ")) {
-    throw new CliError("Generated spec must start with a level-1 title.");
-  }
-
-  if (!spec.includes(`Task ID: ${taskId}`)) {
-    throw new CliError(`Generated spec is missing task id line: Task ID: ${taskId}`);
-  }
-
-  if (!spec.includes("\n## Summary")) {
-    throw new CliError("Generated spec is missing section: Summary");
-  }
-
-  if (!spec.includes("\n## User Story 1")) {
-    throw new CliError("Generated spec is missing section: User Story 1");
-  }
-
-  if (!spec.includes("\n### System Behaviors (EARS)")) {
-    throw new CliError("Generated spec is missing section: System Behaviors (EARS)");
-  }
-
-  if (!spec.includes("\n### Functional Requirements")) {
-    throw new CliError("Generated spec is missing section: Functional Requirements");
-  }
-
-  return `${spec}\n`;
 }
