@@ -1,7 +1,7 @@
-import { loadTask, saveTask } from "../lib/tasks.js";
+import { loadTask, saveTask, specFile } from "../lib/tasks.js";
 import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js";
 import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, workingTreeHasChanges } from "../lib/git.js";
-import { runCodexTaskAutoExit, reviewWithCodexAutoExit } from "../lib/codex.js";
+import { runCodexTaskAutoExit, reviewWithCodexMarkdown } from "../lib/codex.js";
 import { CliError } from "../lib/errors.js";
 import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
 
@@ -14,22 +14,19 @@ function buildRunPrompt(task) {
 
   return `You are working on Legion task ${task.id}.
 
-Read the task spec below, inspect the repository, implement the requested change, and run relevant checks before you stop.
+Read the task spec at: tasks/task_${task.id}/spec.md
+Inspect the repository, implement the requested change, and run relevant checks.
 
+Do not broaden scope beyond the spec.
+${feedback}
 When you are done, summarize:
 - what changed
 - what checks ran
-- any remaining caveats
-
-Task spec:
-
-${task.spec}
-${feedback}
-Do not broaden scope beyond the spec.`;
+- any remaining caveats`;
 }
 
-function buildReviewPrompt(task) {
-  return `Review task ${task.id} against the spec below.
+function buildReviewPrompt(root, task) {
+  return `Review task ${task.id} against the spec file at: ${specFile(root, task.id)}
 
 Use git to compare the current branch against base branch ${task.baseBranch}.
 
@@ -41,30 +38,36 @@ Only check:
 
 Do not request unrelated refactors or broader product changes.
 
-Return decision "pass" if there are no material findings. Return decision "fail" with findings if the task should go back to execution.
+Write your review in this exact format:
 
-Respond with JSON only in this shape:
-{"decision":"pass|fail","summary":"...","findings":[{"severity":"high|medium|low","title":"...","detail":"...","file":"optional/path"}]}
+DECISION: pass|fail
 
-Task spec:
+SUMMARY: <one paragraph explaining the review outcome>
 
-${task.spec}`;
+FINDINGS:
+- [severity] title (file/path): detail`;
 }
 
-function validateReviewShape(review) {
-  if (!review || typeof review !== "object") {
-    throw new CliError("Review output was not an object.");
+function parseReviewMarkdown(text) {
+  const decisionMatch = text.match(/^DECISION:\s*(pass|fail)\s*$/m);
+  if (!decisionMatch) {
+    throw new CliError('Review output must include a "DECISION: pass" or "DECISION: fail" line.');
   }
-  if (!["pass", "fail"].includes(review.decision)) {
-    throw new CliError('Review output must include decision "pass" or "fail".');
+
+  const summaryMatch = text.match(/^SUMMARY:\s*(.+)$/m);
+  if (!summaryMatch || !summaryMatch[1].trim()) {
+    throw new CliError("Review output must include a non-empty SUMMARY line.");
   }
-  if (typeof review.summary !== "string" || !review.summary.trim()) {
-    throw new CliError("Review output must include a non-empty summary.");
+
+  const findings = [];
+  const findingsSection = text.split(/^FINDINGS:\s*$/m)[1];
+  if (findingsSection) {
+    for (const match of findingsSection.matchAll(/^- \[(\w+)\]\s+(.+?)(?:\s+\(([^)]+)\))?:\s*(.+)$/gm)) {
+      findings.push({ severity: match[1], title: match[2], file: match[3] || null, detail: match[4] });
+    }
   }
-  if (!Array.isArray(review.findings)) {
-    throw new CliError("Review output must include a findings array.");
-  }
-  return review;
+
+  return { decision: decisionMatch[1], summary: summaryMatch[1].trim(), findings };
 }
 
 async function executePhase(root, task) {
@@ -104,9 +107,9 @@ async function reviewPhase(root, task) {
     return false;
   }
 
-  const result = await reviewWithCodexAutoExit({
+  const result = await reviewWithCodexMarkdown({
     repoRoot: root,
-    prompt: buildReviewPrompt(task),
+    prompt: buildReviewPrompt(root, task),
   });
 
   if (!result.ok) {
@@ -116,7 +119,7 @@ async function reviewPhase(root, task) {
 
   let review;
   try {
-    review = validateReviewShape(result.review);
+    review = parseReviewMarkdown(result.value);
   } catch (error) {
     recordError(root, task, error);
     return false;
