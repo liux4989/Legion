@@ -7,20 +7,29 @@ import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
 
 const MAX_ITERATIONS = 3;
 
-function buildRunPrompt(root, task) {
-  const lastReview = latestTrajectoryEntry(root, task.id, "review");
-  const feedback = lastReview && lastReview.decision === "fail"
-    ? `\nReview feedback to address before you finish:\n${lastReview.feedback}\n`
-    : "";
-
+function buildExecutePrompt(root, task) {
   return `You are working on Legion task ${task.id}.
 
 Read the task spec at: ${specFile(root, task.id)}
 
 Inspect the repository, implement the requested change, and run relevant checks.
 
+Do not broaden scope beyond the spec.`;
+}
+
+function buildFixPrompt(root, task) {
+  const lastReview = latestTrajectoryEntry(root, task.id, "review");
+
+  return `You are working on Legion task ${task.id}.
+
+Read the task spec at: ${specFile(root, task.id)}
+
+A previous implementation was reviewed and rejected. Address the review feedback below, then run relevant checks.
+
 Do not broaden scope beyond the spec.
-${feedback}`;
+
+Review feedback to address:
+${lastReview.feedback}`;
 }
 
 function buildReviewPrompt(root, task, iteration) {
@@ -49,15 +58,20 @@ Rules:
 }
 
 async function executePhase(root, task, iteration) {
-  if (task.state === "ready") {
+  const isFirstRun = task.state === "ready";
+  if (isFirstRun) {
     transitionTask(task, "start_fixing");
   }
   task.lastError = null;
   saveTask(root, task);
 
+  const prompt = isFirstRun
+    ? buildExecutePrompt(root, task)
+    : buildFixPrompt(root, task);
+
   const result = await runCodexTaskAutoExit({
     repoRoot: root,
-    prompt: buildRunPrompt(root, task),
+    prompt,
   });
 
   if (!result.ok) {
