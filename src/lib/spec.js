@@ -20,15 +20,21 @@ ${intent.trim()}
 
 <Stage1 format>
 - Use a short markdown heading.
-- Include:
-  - behaviors
-  - goal
-  - reason
-  - non-goals
+- Output structured sections:
+  - **behaviors** — extracted expected behaviors (not expanded scope)
+  - **goal** — assumption about why this feature/fix exists
+  - **reason** — assumption about root cause/motivation
+  - **noGoals** — open questions the human didn't address
 </Stage1 format>
 
 <Stage2 format>
-- List user stories.
+- **title** — [Tag] Short focus, with tag like feat, bug, docs
+- **summary** — background + goal sentence
+- **userStories[]** — each with:
+  - **story** — user story text
+  - **systemBehaviors** — EARS-format behaviors
+  - **functionalRequirements** — list
+  - **edgeCases** — list with error handling
 </Stage2 format>
 
 <interaction>
