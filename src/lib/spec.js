@@ -28,13 +28,14 @@ ${intent.trim()}
 </stage1_format>
 
 <stage2_format>
-- **title** — [Tag] Short focus, with tag like feat, bug, docs
+- **title** — \`task#<id>: <short title>\`
 - **summary** — background + goal sentence
-- **userStories[]** — each with:
-  - **story** — user story text
-  - **systemBehaviors** — EARS-format behaviors
-  - **functionalRequirements** — list
-  - **edgeCases** — list with error handling
+- **userStories** — list of user stories
+  - each item must include:
+  - **US<N>: <short title>**
+    - **User story** — a concise user story in the format \`I want ..., so that ...\`
+    - **Acceptance Criteria** — EARS-formatted criteria 
+    - **Edge case** — relevant failure cases, boundary conditions, and error handling expectations
 </stage2_format>
 
 <interaction>
