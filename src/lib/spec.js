@@ -12,27 +12,28 @@ ${intent.trim()}
 </intent>
 
 <workflow>
-- Stage 1: Structural intent.
-- First, analyze the request and produce only a structural intent draft for human review.
-- The structural intent should capture behaviors, goal, reason, and no-goals/assumptions.
-- Do not draft the spec until the user explicitly approves the structural intent.
-- Revise the structural intent from user feedback until it is explicitly approved.
-- Stage 2: Executable spec.
-- After structural intent approval, produce the spec draft for human review.
-- Revise the spec from user feedback until it is explicitly approved.
-- Only after explicit spec approval, write the final markdown file.
+- Stage 1:
+- Normalize the intent to well-defined behavior.
+- Output only the Stage 1 format for user review.
+- Revise from user clarification and feedback.
+- Only until explicit human approval, go on to Stage 2.
+- Stage 2:
+- Normalize the approved well-defined behavior to executable spec.
+- Output only the Stage 2 format for user review.
+- Revise from user clarification and feedback.
+- Only until explicit human approval, write the final file.
 </workflow>
 
-<structural_intent_format>
-- Use a short markdown heading for the structural intent draft.
+<Stage1 format>
+- Use a short markdown heading.
 - Include:
   - behaviors
   - goal
   - reason
-  - no-goals / assumptions
-</structural_intent_format>
+  - non-goals
+</Stage1 format>
 
-<required_markdown>
+<Stage2 format>
 - Start with: # [Tag] Short task focus
 - Then include: Task ID: ${taskId}
 - Include a section: ## Summary
@@ -41,11 +42,11 @@ ${intent.trim()}
   - ### System Behaviors (EARS)
   - ### Functional Requirements
 - Include ### Edge Cases when relevant
-</required_markdown>
+</Stage2 format>
 
 <interaction>
-- During Stage 1, output only the structural intent draft.
-- During Stage 2, output only the spec draft.
+- During Stage 1, output only the Stage 1 draft.
+- During Stage 2, output only the Stage 2 draft.
 - Wait for user feedback after each draft.
 - Only write final markdown after explicit approval.
 - Do not write JSON.
