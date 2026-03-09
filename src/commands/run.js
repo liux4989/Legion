@@ -42,7 +42,6 @@ Only check:
 - correctness
 - regressions
 - mismatch against the spec
-- missing tests if clearly required
 
 Do not request unrelated refactors or broader product changes.
 
