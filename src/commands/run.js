@@ -1,4 +1,4 @@
-import { loadTask, saveTask, specFile } from "../lib/tasks.js";
+import { loadTask, saveTask, specFile, appendTrajectoryEntry, latestTrajectoryEntry } from "../lib/tasks.js";
 import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js";
 import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, workingTreeHasChanges } from "../lib/git.js";
 import { runCodexTaskAutoExit, reviewWithCodexMarkdown } from "../lib/codex.js";
@@ -8,8 +8,9 @@ import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
 const MAX_ITERATIONS = 3;
 
 function buildRunPrompt(root, task) {
-  const feedback = task.latestReviewFeedback
-    ? `\nReview feedback to address before you finish:\n${task.latestReviewFeedback}\n`
+  const lastReview = latestTrajectoryEntry(root, task.id, "review");
+  const feedback = lastReview && lastReview.decision === "fail"
+    ? `\nReview feedback to address before you finish:\n${lastReview.feedback}\n`
     : "";
 
   return `You are working on Legion task ${task.id}.
@@ -67,7 +68,7 @@ function parseReviewMarkdown(text) {
   return { decision: decisionMatch[1], summary: summaryMatch[1].trim(), findings };
 }
 
-async function executePhase(root, task) {
+async function executePhase(root, task, iteration) {
   if (task.state === "ready") {
     transitionTask(task, "start_fixing");
   }
@@ -88,9 +89,11 @@ async function executePhase(root, task) {
     commitAll(root, `task(${task.id}): ${task.intent}`);
   }
 
-  task.latestRunSummary = result.summary;
-  task.latestReviewFeedback = null;
-  task.latestReviewSummary = null;
+  appendTrajectoryEntry(root, task.id, {
+    iteration,
+    phase: "execute",
+    summary: result.summary,
+  });
   transitionTask(task, "fixing_succeeded");
   task.lastError = null;
   saveTask(root, task);
@@ -98,7 +101,7 @@ async function executePhase(root, task) {
   return true;
 }
 
-async function reviewPhase(root, task) {
+async function reviewPhase(root, task, iteration) {
   if (!hasDiffAgainst(root, task.baseBranch)) {
     console.error(`No diff against ${task.baseBranch}. Nothing to review.`);
     return false;
@@ -122,17 +125,6 @@ async function reviewPhase(root, task) {
     return false;
   }
 
-  task.latestReviewSummary = review.summary;
-
-  if (review.decision === "pass") {
-    transitionTask(task, "review_passed");
-    task.latestReviewFeedback = null;
-    task.lastError = null;
-    saveTask(root, task);
-    console.log(`\n── review passed ── state: pr_ready`);
-    return true;
-  }
-
   const findingsText = review.findings
     .map((f, i) => {
       const loc = f.file ? ` (${f.file})` : "";
@@ -140,7 +132,27 @@ async function reviewPhase(root, task) {
     })
     .join("\n\n");
 
-  task.latestReviewFeedback = `${review.summary}\n\n${findingsText}`;
+  const feedback = review.decision === "fail"
+    ? `${review.summary}\n\n${findingsText}`
+    : null;
+
+  appendTrajectoryEntry(root, task.id, {
+    iteration,
+    phase: "review",
+    decision: review.decision,
+    summary: review.summary,
+    findings: review.findings,
+    feedback,
+  });
+
+  if (review.decision === "pass") {
+    transitionTask(task, "review_passed");
+    task.lastError = null;
+    saveTask(root, task);
+    console.log(`\n── review passed ── state: pr_ready`);
+    return true;
+  }
+
   transitionTask(task, "review_failed");
   task.lastError = null;
   saveTask(root, task);
@@ -175,12 +187,12 @@ export async function runTask(args) {
     task = loadTask(root, taskId);
 
     if (task.state === "ready" || task.state === "fixing") {
-      if (!await executePhase(root, task)) break;
+      if (!await executePhase(root, task, i + 1)) break;
       task = loadTask(root, taskId);
     }
 
     if (task.state === "reviewing") {
-      if (!await reviewPhase(root, task)) break;
+      if (!await reviewPhase(root, task, i + 1)) break;
       task = loadTask(root, taskId);
     }
 

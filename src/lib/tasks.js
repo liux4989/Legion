@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
 import path from "node:path";
 import { ensureDir, exists, readJson, writeJson, writeText } from "./fs.js";
 import { CliError } from "./errors.js";
@@ -57,4 +58,33 @@ export function loadTask(repoRoot, taskId) {
 export function saveTask(repoRoot, task) {
   task.updatedAt = new Date().toISOString();
   writeJson(taskFile(repoRoot, task.id), task);
+}
+
+export function trajectoryFile(repoRoot, taskId) {
+  return path.join(taskDir(repoRoot, taskId), "trajectory.jsonl");
+}
+
+export function appendTrajectoryEntry(repoRoot, taskId, entry) {
+  const file = trajectoryFile(repoRoot, taskId);
+  const line = JSON.stringify({ ...entry, timestamp: new Date().toISOString() }) + "\n";
+  fs.appendFileSync(file, line);
+}
+
+export function readTrajectory(repoRoot, taskId) {
+  const file = trajectoryFile(repoRoot, taskId);
+  if (!exists(file)) return [];
+  const content = fs.readFileSync(file, "utf8").trim();
+  if (!content) return [];
+  return content.split("\n").flatMap((line) => {
+    try { return [JSON.parse(line)]; }
+    catch { return []; }
+  });
+}
+
+export function latestTrajectoryEntry(repoRoot, taskId, phase) {
+  const entries = readTrajectory(repoRoot, taskId);
+  for (let i = entries.length - 1; i >= 0; i--) {
+    if (entries[i].phase === phase) return entries[i];
+  }
+  return null;
 }
