@@ -15,6 +15,10 @@ function readJsonFile(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
+function readTextFile(filePath) {
+  return fs.readFileSync(filePath, "utf8");
+}
+
 function buildInteractiveArgs(prompt) {
   const extraArgs = process.env.LEGION_CODEX_ARGS?.trim()
     ? process.env.LEGION_CODEX_ARGS.trim().split(/\s+/)
@@ -40,6 +44,17 @@ ${outputFile}
 Rules for that file:
 - The file must contain JSON only.
 - Do not wrap the JSON in markdown.
+- Ensure the file exists before you exit.`;
+}
+
+function appendTextFileInstructions(prompt, outputFile, formatLabel) {
+  return `${prompt}
+
+Before you finish, write the final result as raw ${formatLabel} to this absolute path:
+${outputFile}
+
+Rules for that file:
+- The file must contain ${formatLabel} only.
 - Ensure the file exists before you exit.`;
 }
 
@@ -160,6 +175,33 @@ ${buildJsonFieldInstructions(schema)}`,
         cause: error,
       };
     }
+  } finally {
+    fs.rmSync(outputFile, { force: true });
+  }
+}
+
+export async function generateTextWithCodex({ repoRoot, prompt, prefix = "legion", extension = "md", formatLabel = "markdown" }) {
+  const outputFile = tmpFile(prefix, extension);
+  const inlinePrompt = appendTextFileInstructions(prompt, outputFile, formatLabel);
+
+  try {
+    const result = runInlineCodex(repoRoot, inlinePrompt);
+
+    if (!result.ok) {
+      return result;
+    }
+
+    if (!fs.existsSync(outputFile)) {
+      return {
+        ok: false,
+        error: `Codex did not write the expected ${formatLabel} output file: ${outputFile}`,
+      };
+    }
+
+    return {
+      ok: true,
+      value: readTextFile(outputFile),
+    };
   } finally {
     fs.rmSync(outputFile, { force: true });
   }

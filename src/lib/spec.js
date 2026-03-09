@@ -1,5 +1,3 @@
-import { CliError } from "./errors.js";
-
 function normalizeLine(value) {
   return String(value ?? "")
     .replace(/\s+/g, " ")
@@ -26,8 +24,6 @@ function normalizeOptionalList(values) {
     .filter(Boolean);
 }
 
-// --- Phase 1: Intent ---
-
 export function buildIntentPrompt(intent, taskId) {
   return `Turn the user input into a Structural Intent for Legion task ${taskId}.
 
@@ -45,84 +41,16 @@ ${intent}
 <interaction>
 - Present the structured intent as markdown for user review.
 - Refine from user feedback until user explicitly approves.
-- Only write final JSON after explicit approval.
+- Only write final markdown after explicit approval.
 </interaction>
 `;
 }
-
-export function intentOutputSchema() {
-  return {
-    type: "object",
-    additionalProperties: false,
-    required: ["behaviors", "goal", "reason", "noGoals"],
-    properties: {
-      behaviors: {
-        type: "array",
-        minItems: 1,
-        maxItems: 8,
-        items: { type: "string", minLength: 1 },
-      },
-      goal: { type: "string", minLength: 1 },
-      reason: { type: "string", minLength: 1 },
-      noGoals: {
-        type: "array",
-        minItems: 0,
-        maxItems: 8,
-        items: { type: "string", minLength: 1 },
-      },
-    },
-  };
-}
-
-export function validateIntentDraft(draft) {
-  if (!draft || typeof draft !== "object") {
-    throw new CliError("Generated intent was not an object.");
-  }
-
-  const goal = normalizeLine(draft.goal);
-  const reason = normalizeLine(draft.reason);
-
-  if (!goal) {
-    throw new CliError("Generated intent is missing section: goal");
-  }
-
-  if (!reason) {
-    throw new CliError("Generated intent is missing section: reason");
-  }
-
-  return {
-    behaviors: normalizeList(draft.behaviors, "behaviors"),
-    goal,
-    reason,
-    noGoals: normalizeOptionalList(draft.noGoals),
-  };
-}
-
-// --- Phase 2: Spec ---
-
-function renderIntentContext(intent) {
-  const renderList = (items) => items.map((item) => `- ${item}`).join("\n");
-  const noGoals = intent.noGoals.length > 0 ? renderList(intent.noGoals) : "- None";
-
-  return `<intent_brief>
-## Behaviors
-${renderList(intent.behaviors)}
-
-## Goal [assumption]
-${intent.goal}
-
-## Reason [assumption]
-${intent.reason}
-
-## No Goals [assumption]
-${noGoals}
-</intent_brief>`;
-}
-
-export function buildSpecPrompt(intent, taskId) {
+export function buildSpecPrompt(intentBrief, taskId) {
   return `Turn the validated intent into an executable spec for Legion task ${taskId}.
 
-${renderIntentContext(intent)}
+<intent_brief>
+${intentBrief.trim()}
+</intent_brief>
 
 <expected_struct>
 - title: [Tag] Short task focus. Tags: feat, bug, docs

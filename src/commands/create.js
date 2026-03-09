@@ -1,4 +1,4 @@
-import { generateObjectWithCodex } from "../lib/codex.js";
+import { generateObjectWithCodex, generateTextWithCodex } from "../lib/codex.js";
 import { currentBranch } from "../lib/git.js";
 import { createTaskRecord, makeTaskId } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
@@ -6,10 +6,8 @@ import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
 import {
   buildIntentPrompt,
   buildSpecPrompt,
-  intentOutputSchema,
   renderSpec,
   specOutputSchema,
-  validateIntentDraft,
 } from "../lib/spec.js";
 
 export async function createTask(args) {
@@ -24,10 +22,9 @@ export async function createTask(args) {
   const root = project.root;
   const taskId = makeTaskId();
 
-  const intentResult = await generateObjectWithCodex({
+  const intentResult = await generateTextWithCodex({
     repoRoot: root,
     prompt: buildIntentPrompt(intent, taskId),
-    schema: intentOutputSchema(),
     prefix: "legion-intent",
   });
 
@@ -35,11 +32,11 @@ export async function createTask(args) {
     throw new CliError(`Failed to generate intent: ${intentResult.error}`, { cause: intentResult.cause });
   }
 
-  const validatedIntent = validateIntentDraft(intentResult.value);
+  const intentBrief = intentResult.value.trim();
 
   const specResult = await generateObjectWithCodex({
     repoRoot: root,
-    prompt: buildSpecPrompt(validatedIntent, taskId),
+    prompt: buildSpecPrompt(intentBrief, taskId),
     schema: specOutputSchema(),
     prefix: "legion-spec",
   });
@@ -61,7 +58,7 @@ export async function createTask(args) {
     branchName,
     createdAt: now,
     updatedAt: now,
-    intentBrief: validatedIntent,
+    intentBrief,
     latestRunSummary: null,
     latestReviewSummary: null,
     latestReviewFeedback: null,
