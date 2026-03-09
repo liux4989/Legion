@@ -11,12 +11,26 @@ export function buildCreatePrompt(intent, taskId) {
 ${intent.trim()}
 </intent>
 
-<analysis>
-- First normalize the intent internally before writing the spec.
-- Extract expected behaviors from the request.
-- Infer goal, reason, and no-goals when the user left them implicit.
-- Keep assumptions explicit in the spec.
-</analysis>
+<workflow>
+- Stage 1: Structural intent.
+- First, analyze the request and produce only a structural intent draft for human review.
+- The structural intent should capture behaviors, goal, reason, and no-goals/assumptions.
+- Do not draft the spec until the user explicitly approves the structural intent.
+- Revise the structural intent from user feedback until it is explicitly approved.
+- Stage 2: Executable spec.
+- After structural intent approval, produce the spec draft for human review.
+- Revise the spec from user feedback until it is explicitly approved.
+- Only after explicit spec approval, write the final markdown file.
+</workflow>
+
+<structural_intent_format>
+- Use a short markdown heading for the structural intent draft.
+- Include:
+  - behaviors
+  - goal
+  - reason
+  - no-goals / assumptions
+</structural_intent_format>
 
 <required_markdown>
 - Start with: # [Tag] Short task focus
@@ -30,8 +44,9 @@ ${intent.trim()}
 </required_markdown>
 
 <interaction>
-- Present the draft spec as markdown for user review.
-- Refine from user feedback until user explicitly approves.
+- During Stage 1, output only the structural intent draft.
+- During Stage 2, output only the spec draft.
+- Wait for user feedback after each draft.
 - Only write final markdown after explicit approval.
 - Do not write JSON.
 </interaction>

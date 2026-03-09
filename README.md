@@ -51,7 +51,7 @@ legion run --project app-one <task-id>
 legion pr --project app-one <task-id>
 ```
 
-`create` runs one inline Codex pass that turns raw intent into the final markdown spec.
+`create` runs one inline Codex pass with a staged HIL workflow: structural intent draft and approval first, then spec draft and approval, then final markdown output.
 
 Run the autonomous execute→review→fix loop:
 
@@ -79,7 +79,7 @@ tasks/
 
 ## Notes
 
-- `create` keeps spec authoring in a single inline interactive Codex pass and stores the approved markdown spec directly.
+- `create` keeps a single inline interactive Codex session, but the prompt enforces staged HIL gates: approve structural intent first, then approve the spec, then write the final markdown spec.
 - The final spec is structured into:
   - `Title`
   - `Goal`
