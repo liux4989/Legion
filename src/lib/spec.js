@@ -7,27 +7,27 @@ ${intent.trim()}
 
 <workflow>
 - Stage 1:
-- Normalize the intent to well-defined behavior.
+- Turn the intent into well-defined user behaviors aligned to the user intent.
 - Output only the Stage 1 format for user review.
 - Revise from user clarification and feedback.
 - Only until explicit human approval, go on to Stage 2.
 - Stage 2:
-- Normalize the approved well-defined behavior to executable spec.
+- Normalize the approved Stage 1 behaviors to executable spec.
 - Output only the Stage 2 format for user review.
 - Revise from user clarification and feedback.
 - Only until explicit human approval, write the final file.
 </workflow>
 
-<Stage1 format>
+<stage1_format>
 - Use a short markdown heading.
 - Output structured sections:
-  - **behaviors** — extracted expected behaviors (not expanded scope)
+  - **behaviors** — well-defined user behaviors aligned to the user intent, keep them minimal and don't expand beyond what the user asked
   - **goal** — assumption about why this feature/fix exists
   - **reason** — assumption about root cause/motivation
-  - **noGoals** — open questions the human didn't address
-</Stage1 format>
+  - **noGoals** — assumptions the human didn't address but are reasonable to consider
+</stage1_format>
 
-<Stage2 format>
+<stage2_format>
 - **title** — [Tag] Short focus, with tag like feat, bug, docs
 - **summary** — background + goal sentence
 - **userStories[]** — each with:
@@ -35,14 +35,10 @@ ${intent.trim()}
   - **systemBehaviors** — EARS-format behaviors
   - **functionalRequirements** — list
   - **edgeCases** — list with error handling
-</Stage2 format>
+</stage2_format>
 
 <interaction>
-- During Stage 1, output only the Stage 1 draft.
-- During Stage 2, output only the Stage 2 draft.
-- Wait for user feedback after each draft.
 - Only write final markdown after explicit approval.
-- Do not write JSON.
 </interaction>
 `;
 }
