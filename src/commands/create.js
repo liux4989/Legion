@@ -1,15 +1,15 @@
-import { generateObjectWithCodex, generateObjectWithCodexExec } from "../lib/codex.js";
+import { generateObjectWithCodex } from "../lib/codex.js";
 import { currentBranch } from "../lib/git.js";
 import { createTaskRecord, makeTaskId } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
 import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
 import {
-  buildIntentBriefPrompt,
+  buildIntentPrompt,
   buildSpecPrompt,
-  intentBriefOutputSchema,
+  intentOutputSchema,
   renderSpec,
   specOutputSchema,
-  validateIntentBriefDraft,
+  validateIntentDraft,
 } from "../lib/spec.js";
 
 export async function createTask(args) {
@@ -23,29 +23,32 @@ export async function createTask(args) {
   const project = resolveProjectContext(parsed.projectRef);
   const root = project.root;
   const taskId = makeTaskId();
-  const briefResult = await generateObjectWithCodexExec({
+
+  const intentResult = await generateObjectWithCodex({
     repoRoot: root,
-    prompt: buildIntentBriefPrompt(intent, taskId),
-    schema: intentBriefOutputSchema(),
+    prompt: buildIntentPrompt(intent, taskId),
+    schema: intentOutputSchema(),
+    prefix: "legion-intent",
   });
 
-  if (!briefResult.ok) {
-    throw new CliError(`Failed to generate intent brief: ${briefResult.error}`, { cause: briefResult.cause });
+  if (!intentResult.ok) {
+    throw new CliError(`Failed to generate intent: ${intentResult.error}`, { cause: intentResult.cause });
   }
 
-  const intentBrief = validateIntentBriefDraft(briefResult.value);
-  const draftResult = await generateObjectWithCodex({
+  const validatedIntent = validateIntentDraft(intentResult.value);
+
+  const specResult = await generateObjectWithCodex({
     repoRoot: root,
-    prompt: buildSpecPrompt(intentBrief, taskId),
+    prompt: buildSpecPrompt(validatedIntent, taskId),
     schema: specOutputSchema(),
-    prefix: "legion-create",
+    prefix: "legion-spec",
   });
 
-  if (!draftResult.ok) {
-    throw new CliError(`Failed to generate spec: ${draftResult.error}`, { cause: draftResult.cause });
+  if (!specResult.ok) {
+    throw new CliError(`Failed to generate spec: ${specResult.error}`, { cause: specResult.cause });
   }
 
-  const spec = renderSpec(taskId, draftResult.value);
+  const spec = renderSpec(taskId, specResult.value);
   const baseBranch = currentBranch(root) || "main";
   const branchName = `task/${taskId}`;
   const now = new Date().toISOString();
@@ -58,7 +61,7 @@ export async function createTask(args) {
     branchName,
     createdAt: now,
     updatedAt: now,
-    intentBrief,
+    intentBrief: validatedIntent,
     latestRunSummary: null,
     latestReviewSummary: null,
     latestReviewFeedback: null,

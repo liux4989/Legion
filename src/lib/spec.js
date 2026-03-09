@@ -8,13 +8,12 @@ function normalizeLine(value) {
 
 function normalizeList(values, sectionName) {
   if (!Array.isArray(values) || values.length === 0) {
-    throw new CliError(`Generated spec is missing section: ${sectionName}`);
+    throw new CliError(`Generated output is missing section: ${sectionName}`);
   }
 
   return values
     .map((value) => normalizeLine(value))
-    .filter(Boolean)
-    .slice(0, 4);
+    .filter(Boolean);
 }
 
 function normalizeOptionalList(values) {
@@ -24,144 +23,184 @@ function normalizeOptionalList(values) {
 
   return values
     .map((value) => normalizeLine(value))
-    .filter(Boolean)
-    .slice(0, 4);
+    .filter(Boolean);
 }
 
-export function buildIntentBriefPrompt(intent, taskId) {
-  return `Create an Intent Brief for Legion task ${taskId}.
+// --- Phase 1: Intent ---
 
-## Source Input
+export function buildIntentPrompt(intent, taskId) {
+  return `Turn the user input into a Structural Intent for Legion task ${taskId}.
+
+<intent>
 ${intent}
+</intent>
 
-## Goal
-- Normalize the user request into a concise execution brief.
-- Preserve the original request in normalized form.
+<expected_struct>
+- behaviors: extract the user expected behaviors instead of expanding the original input
+- goal [assumption]: why we want to add this feature — is it a bug, an existing feature enhancement, etc.
+- reason [assumption]: the root cause or motivation behind the request
+- noGoals [assumption]: open questions the user did not address but are reasonable to consider
+</expected_struct>
 
-## Constraints
-- Keep the brief deterministic, structural, and execution-oriented.
-- Do not broaden scope or add new product behavior.
-- Keep every field concise.
-- Unknowns must contain only real unresolved items.
-- Do not mention tests unless the request explicitly requires them.
+<interaction>
+- Present the structured intent as markdown for user review.
+- Refine from user feedback until user explicitly approves.
+- Only write final JSON after explicit approval.
+</interaction>
 `;
 }
 
-export function validateIntentBriefDraft(draft) {
-  if (!draft || typeof draft !== "object") {
-    throw new CliError("Generated intent brief was not an object.");
-  }
-
-  const originalIntent = normalizeLine(draft.originalIntent);
-  const coreUserValue = normalizeLine(draft.coreUserValue);
-
-  if (!originalIntent) {
-    throw new CliError("Generated intent brief is missing section: Original Intent");
-  }
-
-  if (!coreUserValue) {
-    throw new CliError("Generated intent brief is missing section: Core User Value");
-  }
-
-  return {
-    originalIntent,
-    coreUserValue,
-    expectedBehavior: normalizeList(draft.expectedBehavior, "Expected Behavior"),
-    constraints: normalizeList(draft.constraints, "Constraints"),
-    unknowns: normalizeOptionalList(draft.unknowns),
-  };
-}
-
-export function intentBriefOutputSchema() {
+export function intentOutputSchema() {
   return {
     type: "object",
     additionalProperties: false,
-    required: ["originalIntent", "coreUserValue", "expectedBehavior", "constraints", "unknowns"],
+    required: ["behaviors", "goal", "reason", "noGoals"],
     properties: {
-      originalIntent: { type: "string", minLength: 1 },
-      coreUserValue: { type: "string", minLength: 1 },
-      expectedBehavior: {
+      behaviors: {
         type: "array",
         minItems: 1,
-        maxItems: 4,
+        maxItems: 8,
         items: { type: "string", minLength: 1 },
       },
-      constraints: {
-        type: "array",
-        minItems: 1,
-        maxItems: 4,
-        items: { type: "string", minLength: 1 },
-      },
-      unknowns: {
+      goal: { type: "string", minLength: 1 },
+      reason: { type: "string", minLength: 1 },
+      noGoals: {
         type: "array",
         minItems: 0,
-        maxItems: 4,
+        maxItems: 8,
         items: { type: "string", minLength: 1 },
       },
     },
   };
 }
 
-function renderSectionList(items) {
-  return items.map((item) => `- ${item}`).join("\n");
+export function validateIntentDraft(draft) {
+  if (!draft || typeof draft !== "object") {
+    throw new CliError("Generated intent was not an object.");
+  }
+
+  const goal = normalizeLine(draft.goal);
+  const reason = normalizeLine(draft.reason);
+
+  if (!goal) {
+    throw new CliError("Generated intent is missing section: goal");
+  }
+
+  if (!reason) {
+    throw new CliError("Generated intent is missing section: reason");
+  }
+
+  return {
+    behaviors: normalizeList(draft.behaviors, "behaviors"),
+    goal,
+    reason,
+    noGoals: normalizeOptionalList(draft.noGoals),
+  };
 }
 
-function renderIntentBriefContext(intentBrief) {
-  const unknowns = intentBrief.unknowns.length > 0 ? renderSectionList(intentBrief.unknowns) : "- None";
+// --- Phase 2: Spec ---
+
+function renderIntentContext(intent) {
+  const renderList = (items) => items.map((item) => `- ${item}`).join("\n");
+  const noGoals = intent.noGoals.length > 0 ? renderList(intent.noGoals) : "- None";
 
   return `<intent_brief>
-# Intent Brief
+## Behaviors
+${renderList(intent.behaviors)}
 
-## Original intent
-${intentBrief.originalIntent}
+## Goal [assumption]
+${intent.goal}
 
-## Core user value
-${intentBrief.coreUserValue}
+## Reason [assumption]
+${intent.reason}
 
-## Expected behavior
-${renderSectionList(intentBrief.expectedBehavior)}
-
-## Constraints
-${renderSectionList(intentBrief.constraints)}
-
-## Unknowns
-${unknowns}
+## No Goals [assumption]
+${noGoals}
 </intent_brief>`;
 }
 
-export function buildSpecPrompt(intentBrief, taskId) {
-  return `Create a spec draft for Legion task ${taskId} from this Intent Brief.
+export function buildSpecPrompt(intent, taskId) {
+  return `Turn the validated intent into an executable spec for Legion task ${taskId}.
 
-## Source Of Truth
-${renderIntentBriefContext(intentBrief)}
+${renderIntentContext(intent)}
 
-## Interaction Flow
-- Work interactively with the user in the terminal before finalizing the spec.
-- First present the draft for review as markdown, not JSON.
-- Use this markdown structure: Title, Goal, Scope, Non-goals, Requirements, Success Criteria, and Notes.
-- Refine the markdown draft from user feedback and ask for explicit approval.
-- Do not write the final JSON output file until the user explicitly approves the spec.
+<expected_struct>
+- title: [Tag] Short task focus. Tags: feat, bug, docs
+- summary: background + goal (what problem, what vision)
+- userStories: list of user stories, each with:
+  - story: user story text
+  - systemBehaviors: EARS format
+  - functionalRequirements: list
+  - edgeCases: list with expected error handling
+</expected_struct>
 
-## Scope Rules
-- Preserve the original intent and core user value.
-- Do not broaden scope.
-- Prefer the smallest complete unit of user value.
-- Do not introduce new product behavior unless it is required to make the request executable.
-- When ambiguity exists, resolve it conservatively, record it as an explicit assumption, or move it to non-goals.
-- Separate in-scope work from non-goals clearly.
-- Convert vague behavior, user-visible outcomes, and edge cases into observable requirements.
-- Define success criteria that a reviewer can validate quickly.
-- Use Notes only for assumptions or implementation detail that removes ambiguity or prevents repeated failure.
-- Do not mention tests unless the request explicitly requires them.
-
-## Writing Style
-- Keep the spec concise, concrete, and execution-oriented.
-- Prefer short bullets over dense paragraphs.
-- Use concrete, observable wording.
-- Avoid filler, repetition, and generic engineering advice.
-- Do not duplicate the same idea across sections.
-- If a section has no meaningful content, return an empty list.
+<interaction>
+- Present the draft spec as markdown for user review.
+- Refine from user feedback until user explicitly approves.
+- Only write final JSON after explicit approval.
+</interaction>
 `;
+}
+
+export function specOutputSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: ["title", "summary", "userStories"],
+    properties: {
+      title: { type: "string", minLength: 1 },
+      summary: { type: "string", minLength: 1 },
+      userStories: {
+        type: "array",
+        minItems: 1,
+        maxItems: 8,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["story", "systemBehaviors", "functionalRequirements", "edgeCases"],
+          properties: {
+            story: { type: "string", minLength: 1 },
+            systemBehaviors: {
+              type: "array",
+              minItems: 1,
+              maxItems: 8,
+              items: { type: "string", minLength: 1 },
+            },
+            functionalRequirements: {
+              type: "array",
+              minItems: 1,
+              maxItems: 8,
+              items: { type: "string", minLength: 1 },
+            },
+            edgeCases: {
+              type: "array",
+              minItems: 0,
+              maxItems: 8,
+              items: { type: "string", minLength: 1 },
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
+function validateUserStory(story, index) {
+  if (!story || typeof story !== "object") {
+    throw new CliError(`User story ${index + 1} is not an object.`);
+  }
+
+  const storyText = normalizeLine(story.story);
+  if (!storyText) {
+    throw new CliError(`User story ${index + 1} is missing story text.`);
+  }
+
+  return {
+    story: storyText,
+    systemBehaviors: normalizeList(story.systemBehaviors, `userStories[${index}].systemBehaviors`),
+    functionalRequirements: normalizeList(story.functionalRequirements, `userStories[${index}].functionalRequirements`),
+    edgeCases: normalizeOptionalList(story.edgeCases),
+  };
 }
 
 export function validateSpecDraft(draft) {
@@ -170,98 +209,45 @@ export function validateSpecDraft(draft) {
   }
 
   const title = normalizeLine(draft.title);
-  const goal = normalizeLine(draft.goal);
+  const summary = normalizeLine(draft.summary);
 
   if (!title) {
-    throw new CliError("Generated spec is missing section: Title");
+    throw new CliError("Generated spec is missing section: title");
   }
 
-  if (!goal) {
-    throw new CliError("Generated spec is missing section: Goal");
+  if (!summary) {
+    throw new CliError("Generated spec is missing section: summary");
+  }
+
+  if (!Array.isArray(draft.userStories) || draft.userStories.length === 0) {
+    throw new CliError("Generated spec is missing section: userStories");
   }
 
   return {
     title,
-    goal,
-    scope: normalizeList(draft.scope, "Scope"),
-    nonGoals: normalizeOptionalList(draft.nonGoals),
-    requirements: normalizeList(draft.requirements, "Requirements"),
-    successCriteria: normalizeList(draft.successCriteria, "Success Criteria"),
-    notes: normalizeOptionalList(draft.notes),
-  };
-}
-
-export function specOutputSchema() {
-  return {
-    type: "object",
-    additionalProperties: false,
-    required: [
-      "title",
-      "goal",
-      "scope",
-      "nonGoals",
-      "requirements",
-      "successCriteria",
-      "notes",
-    ],
-    properties: {
-      title: { type: "string", minLength: 1 },
-      goal: { type: "string", minLength: 1 },
-      scope: {
-        type: "array",
-        minItems: 1,
-        maxItems: 8,
-        items: { type: "string", minLength: 1 },
-      },
-      nonGoals: {
-        type: "array",
-        minItems: 0,
-        maxItems: 8,
-        items: { type: "string", minLength: 1 },
-      },
-      requirements: {
-        type: "array",
-        minItems: 1,
-        maxItems: 8,
-        items: { type: "string", minLength: 1 },
-      },
-      successCriteria: {
-        type: "array",
-        minItems: 1,
-        maxItems: 8,
-        items: { type: "string", minLength: 1 },
-      },
-      notes: {
-        type: "array",
-        minItems: 0,
-        maxItems: 8,
-        items: { type: "string", minLength: 1 },
-      },
-    },
+    summary,
+    userStories: draft.userStories.map(validateUserStory),
   };
 }
 
 export function renderSpec(taskId, draft) {
   const spec = validateSpecDraft(draft);
   const renderList = (items) => items.map((item) => `- ${item}`).join("\n");
+
   const sections = [
     `# ${spec.title}`,
     `Task ID: ${taskId}`,
-    `## Goal\n\n${spec.goal}`,
-    `## Scope\n\n${renderList(spec.scope)}`,
+    `## Summary\n\n${spec.summary}`,
   ];
 
-  if (spec.nonGoals.length > 0) {
-    sections.push(`## Non-goals\n\n${renderList(spec.nonGoals)}`);
-  }
-
-  sections.push(`## Requirements\n\n${renderList(spec.requirements)}`);
-
-  sections.push(`## Success Criteria\n\n${renderList(spec.successCriteria)}`);
-
-  if (spec.notes.length > 0) {
-    sections.push(`## Notes\n\n${renderList(spec.notes)}`);
-  }
+  spec.userStories.forEach((us, i) => {
+    sections.push(`## User Story ${i + 1}\n\n${us.story}`);
+    sections.push(`### System Behaviors (EARS)\n\n${renderList(us.systemBehaviors)}`);
+    sections.push(`### Functional Requirements\n\n${renderList(us.functionalRequirements)}`);
+    if (us.edgeCases.length > 0) {
+      sections.push(`### Edge Cases\n\n${renderList(us.edgeCases)}`);
+    }
+  });
 
   return `${sections.join("\n\n")}\n`;
 }
