@@ -1,3 +1,5 @@
+import { CliError } from "./errors.js";
+
 function normalizeLine(value) {
   return String(value ?? "")
     .replace(/\s+/g, " ")
@@ -24,33 +26,19 @@ function normalizeOptionalList(values) {
     .filter(Boolean);
 }
 
-export function buildIntentPrompt(intent, taskId) {
-  return `Turn the user input into a Structural Intent for Legion task ${taskId}.
+export function buildCreatePrompt(intent, taskId) {
+  return `Turn the user request into an executable spec for Legion task ${taskId}.
 
 <intent>
-${intent}
+${intent.trim()}
 </intent>
 
-<expected_struct>
-- behaviors: extract the user expected behaviors instead of expanding the original input
-- goal [assumption]: why we want to add this feature — is it a bug, an existing feature enhancement, etc.
-- reason [assumption]: the root cause or motivation behind the request
-- noGoals [assumption]: open questions the user did not address but are reasonable to consider
-</expected_struct>
-
-<interaction>
-- Present the structured intent as markdown for user review.
-- Refine from user feedback until user explicitly approves.
-- Only write final markdown after explicit approval.
-</interaction>
-`;
-}
-export function buildSpecPrompt(intentBrief, taskId) {
-  return `Turn the validated intent into an executable spec for Legion task ${taskId}.
-
-<intent_brief>
-${intentBrief.trim()}
-</intent_brief>
+<analysis>
+- First normalize the intent internally before writing the spec.
+- Extract expected behaviors from the request.
+- Infer goal, reason, and no-goals when the user left them implicit.
+- Keep assumptions explicit in the resulting summary or requirements.
+</analysis>
 
 <expected_struct>
 - title: [Tag] Short task focus. Tags: feat, bug, docs
