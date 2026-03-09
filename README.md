@@ -21,13 +21,7 @@ Legion is a minimal prototype orchestrator for coding tasks. It implements a `Sp
 
 ## Setup
 
-Install as a project devDependency:
-
-```bash
-pnpm add -D legion
-```
-
-Or link locally during development:
+Link locally for development:
 
 ```bash
 pnpm link --global
