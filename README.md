@@ -24,6 +24,7 @@ Legion is a minimal prototype orchestrator for coding tasks. It implements a `Sp
 Link locally for development:
 
 ```bash
+npm unlink -g legion   # remove old npm link if present
 pnpm link --global
 ```
 
