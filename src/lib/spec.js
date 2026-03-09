@@ -33,7 +33,7 @@ ${intent.trim()}
 - **userStories** — list of user stories
   - each item must include:
   - **US<N>: <short title>**
-    - **User story** — a concise user story in the format \`I want ..., so that ...\`
+    - **User story** — a concise user story in the format :As a (role), I want (function) so that (business value)
     - **Acceptance Criteria** — EARS-formatted criteria 
     - **Edge case** — relevant failure cases, boundary conditions, and error handling expectations
 </stage2_format>
