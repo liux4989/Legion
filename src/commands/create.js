@@ -16,10 +16,17 @@ export async function createTask(args) {
 
   const project = resolveProjectContext(parsed.projectRef);
   const root = project.root;
-  const taskId = makeTaskId();
   const baseBranch = currentBranch(root) || "main";
-  const branchName = `task/${taskId}`;
   const now = new Date().toISOString();
+
+  const issue = createIssue({
+    cwd: root,
+    title: intent,
+    body: "",
+  });
+
+  const taskId = makeTaskId(issue.number);
+  const branchName = `task/${taskId}`;
 
   const task = {
     id: taskId,
@@ -29,7 +36,7 @@ export async function createTask(args) {
     branchName,
     createdAt: now,
     updatedAt: now,
-    issueUrl: null,
+    issueUrl: issue.url,
     prUrl: null,
     lastError: null,
   };
@@ -50,13 +57,6 @@ export async function createTask(args) {
     spec,
     task,
   });
-
-  const issue = createIssue({
-    cwd: root,
-    title: issueTitle(task),
-    body: issueBody(root, task),
-  });
-  saveTask(root, { ...task, issueUrl: issue.url });
 
   console.log(`Project: ${project.name} (${project.path})`);
   console.log(`Created task ${taskId}`);

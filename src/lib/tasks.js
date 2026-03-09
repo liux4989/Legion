@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { ensureDir, exists, readJson, writeJson, writeText } from "./fs.js";
@@ -16,8 +15,8 @@ export function tasksRoot(repoRoot) {
   return path.join(repoRoot, "tasks");
 }
 
-export function makeTaskId() {
-  return randomUUID();
+export function makeTaskId(issueNumber) {
+  return String(issueNumber);
 }
 
 export function taskDir(repoRoot, taskId) {
