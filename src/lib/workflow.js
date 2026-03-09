@@ -49,7 +49,7 @@ export function prTitle(task) {
 
 export function prBody(task) {
   const summary = task.latestRunSummary || "No execution summary recorded.";
-  const specPath = path.join("tasks", `task_${task.id}`, "task.json");
+  const specPath = path.join("tasks", `task_${task.id}`, "spec.md");
   const spec = task.spec || "No spec recorded.";
 
   return [

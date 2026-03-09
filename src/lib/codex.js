@@ -66,9 +66,17 @@ function runInlineCodex(repoRoot, prompt) {
   return { ok: true };
 }
 
-export async function generateTextWithCodex({ repoRoot, prompt, prefix = "legion", extension = "md", formatLabel = "markdown" }) {
-  const outputFile = tmpFile(prefix, extension);
-  const inlinePrompt = appendTextFileInstructions(prompt, outputFile, formatLabel);
+export async function generateTextWithCodex({
+  repoRoot,
+  prompt,
+  prefix = "legion",
+  extension = "md",
+  formatLabel = "markdown",
+  outputFile,
+}) {
+  const filePath = outputFile || tmpFile(prefix, extension);
+  const inlinePrompt = appendTextFileInstructions(prompt, filePath, formatLabel);
+  const shouldCleanup = !outputFile;
 
   try {
     const result = runInlineCodex(repoRoot, inlinePrompt);
@@ -77,19 +85,21 @@ export async function generateTextWithCodex({ repoRoot, prompt, prefix = "legion
       return result;
     }
 
-    if (!fs.existsSync(outputFile)) {
+    if (!fs.existsSync(filePath)) {
       return {
         ok: false,
-        error: `Codex did not write the expected ${formatLabel} output file: ${outputFile}`,
+        error: `Codex did not write the expected ${formatLabel} output file: ${filePath}`,
       };
     }
 
     return {
       ok: true,
-      value: readTextFile(outputFile),
+      value: readTextFile(filePath),
     };
   } finally {
-    fs.rmSync(outputFile, { force: true });
+    if (shouldCleanup) {
+      fs.rmSync(filePath, { force: true });
+    }
   }
 }
 

@@ -74,6 +74,7 @@ Runtime state is stored under `tasks/` and kept out of git:
 ```text
 tasks/
   task_<id>/
+    spec.md
     task.json
 ```
 
@@ -92,5 +93,5 @@ tasks/
 - The user can interact with codex during execution (it runs inline with `stdio: "inherit"`). Ctrl-C aborts the loop.
 - Review findings are fed back to codex as fix instructions on the next iteration.
 - `pr` creates a commit if the task branch still has local changes, then pushes and creates or updates a PR with `gh`.
-- The task spec is stored in `task.json` and inlined into the PR body so reviewers can see the full scope.
+- The task spec is stored in `spec.md` and also copied into `task.json`; the PR body inlines the spec for reviewers.
 - Set `LEGION_CODEX_ARGS` if you need to append extra flags to Codex commands, for example `LEGION_CODEX_ARGS='-m o3'`.

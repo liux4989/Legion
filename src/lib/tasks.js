@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { ensureDir, exists, readJson, readText, writeJson } from "./fs.js";
+import { ensureDir, exists, readJson, readText, writeJson, writeText } from "./fs.js";
 import { CliError } from "./errors.js";
 
 export const TASK_STATES = new Set([
@@ -27,13 +27,14 @@ export function taskFile(repoRoot, taskId) {
   return path.join(taskDir(repoRoot, taskId), "task.json");
 }
 
-function legacySpecFile(repoRoot, taskId) {
+export function specFile(repoRoot, taskId) {
   return path.join(taskDir(repoRoot, taskId), "spec.md");
 }
 
 export function createTaskRecord(repoRoot, data) {
   const dir = taskDir(repoRoot, data.id);
   ensureDir(dir);
+  writeText(specFile(repoRoot, data.id), data.spec);
   writeJson(taskFile(repoRoot, data.id), {
     ...data.task,
     spec: data.spec,
@@ -49,8 +50,8 @@ export function loadTask(repoRoot, taskId) {
 
   const task = readJson(filePath);
 
-  if (!task.spec && exists(legacySpecFile(repoRoot, taskId))) {
-    task.spec = readText(legacySpecFile(repoRoot, taskId));
+  if (!task.spec && exists(specFile(repoRoot, taskId))) {
+    task.spec = readText(specFile(repoRoot, taskId));
   }
 
   if (!TASK_STATES.has(task.state)) {
