@@ -1,7 +1,7 @@
 import { generateTextWithCodex } from "../lib/codex.js";
 import { currentBranch } from "../lib/git.js";
 import { createIssue, issueBody, issueTitle } from "../lib/issues.js";
-import { createTaskRecord, makeTaskId } from "../lib/tasks.js";
+import { createTaskRecord, makeTaskId, saveTask } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
 import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
 import { buildCreatePrompt } from "../lib/spec.js";
@@ -49,16 +49,18 @@ export async function createTask(args) {
 
   const spec = `${specResult.value.trim()}\n`;
   const savedTask = { ...task, spec };
+  createTaskRecord(root, {
+    id: taskId,
+    spec,
+    task: savedTask,
+  });
+
   const issue = createIssue({
     cwd: root,
     title: issueTitle(savedTask),
     body: issueBody(savedTask),
   });
-  createTaskRecord(root, {
-    id: taskId,
-    spec,
-    task: { ...savedTask, issueUrl: issue.url },
-  });
+  saveTask(root, { ...savedTask, issueUrl: issue.url });
 
   console.log(`Project: ${project.name} (${project.path})`);
   console.log(`Created task ${taskId}`);
