@@ -1,13 +1,9 @@
-import { generateObjectWithCodex } from "../lib/codex.js";
+import { generateTextWithCodex } from "../lib/codex.js";
 import { currentBranch } from "../lib/git.js";
 import { createTaskRecord, makeTaskId } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
 import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
-import {
-  buildCreatePrompt,
-  renderSpec,
-  specOutputSchema,
-} from "../lib/spec.js";
+import { buildCreatePrompt, validateSpecMarkdown } from "../lib/spec.js";
 
 export async function createTask(args) {
   const parsed = parseProjectArgs(args);
@@ -21,10 +17,9 @@ export async function createTask(args) {
   const root = project.root;
   const taskId = makeTaskId();
 
-  const specResult = await generateObjectWithCodex({
+  const specResult = await generateTextWithCodex({
     repoRoot: root,
     prompt: buildCreatePrompt(intent, taskId),
-    schema: specOutputSchema(),
     prefix: "legion-spec",
   });
 
@@ -32,7 +27,7 @@ export async function createTask(args) {
     throw new CliError(`Failed to generate spec: ${specResult.error}`, { cause: specResult.cause });
   }
 
-  const spec = renderSpec(taskId, specResult.value);
+  const spec = validateSpecMarkdown(specResult.value, taskId);
   const baseBranch = currentBranch(root) || "main";
   const branchName = `task/${taskId}`;
   const now = new Date().toISOString();

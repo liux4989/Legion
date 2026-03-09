@@ -6,7 +6,7 @@ Legion is a minimal prototype orchestrator for coding tasks. It implements a `Sp
 
 - Harness: `codex` CLI only
 - Isolation: git branches
-- Spec creation: one inline Codex task that turns raw intent into the final spec
+- Spec creation: one inline Codex task that writes the final markdown spec
 - PR creation: explicit `pr` command after review passes
 - Auto-exit: passes a codex `notify` hook at launch time to detect turn completion and auto-advance phases
 - Auto-exit: passes a codex `notify` hook at launch time to detect turn completion and auto-advance phases
@@ -51,7 +51,7 @@ legion run --project app-one <task-id>
 legion pr --project app-one <task-id>
 ```
 
-`create` runs one inline Codex pass that turns raw intent into the final spec issue.
+`create` runs one inline Codex pass that turns raw intent into the final markdown spec.
 
 Run the autonomous execute→review→fix loop:
 
@@ -79,7 +79,7 @@ tasks/
 
 ## Notes
 
-- `create` keeps spec authoring in a single inline interactive Codex pass and folds intent normalization into that prompt.
+- `create` keeps spec authoring in a single inline interactive Codex pass and stores the approved markdown spec directly.
 - The final spec is structured into:
   - `Title`
   - `Goal`
