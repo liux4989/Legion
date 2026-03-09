@@ -1,7 +1,7 @@
 import { generateTextWithCodex } from "../lib/codex.js";
 import { currentBranch } from "../lib/git.js";
 import { createIssue, issueBody, issueTitle } from "../lib/issues.js";
-import { createTaskRecord, makeTaskId, saveTask, specFile } from "../lib/tasks.js";
+import { createTaskRecord, makeTaskId } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
 import { parseProjectArgs, resolveProjectContext } from "../lib/projects.js";
 import { buildCreatePrompt } from "../lib/spec.js";
@@ -37,14 +37,10 @@ export async function createTask(args) {
     lastError: null,
   };
 
-  createTaskRecord(root, { id: taskId, spec: "", task });
-
-  const outputFile = specFile(root, taskId);
   const specResult = await generateTextWithCodex({
     repoRoot: root,
     prompt: buildCreatePrompt(intent, taskId),
     prefix: "legion-spec",
-    outputFile,
   });
 
   if (!specResult.ok) {
@@ -53,14 +49,16 @@ export async function createTask(args) {
 
   const spec = `${specResult.value.trim()}\n`;
   const savedTask = { ...task, spec };
-  saveTask(root, savedTask);
   const issue = createIssue({
     cwd: root,
     title: issueTitle(savedTask),
     body: issueBody(savedTask),
   });
-  savedTask.issueUrl = issue.url;
-  saveTask(root, savedTask);
+  createTaskRecord(root, {
+    id: taskId,
+    spec,
+    task: { ...savedTask, issueUrl: issue.url },
+  });
 
   console.log(`Project: ${project.name} (${project.path})`);
   console.log(`Created task ${taskId}`);
