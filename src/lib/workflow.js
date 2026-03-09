@@ -1,6 +1,7 @@
 import path from "node:path";
 import { CliError } from "./errors.js";
-import { saveTask } from "./tasks.js";
+import { saveTask, specFile } from "./tasks.js";
+import { readText } from "./fs.js";
 
 const TASK_TRANSITIONS = {
   ready: {
@@ -47,10 +48,10 @@ export function prTitle(task) {
   return `[${task.id}] ${task.intent}`;
 }
 
-export function prBody(task) {
+export function prBody(repoRoot, task) {
   const summary = task.latestRunSummary || "No execution summary recorded.";
   const specPath = path.join("tasks", `task_${task.id}`, "spec.md");
-  const spec = task.spec || "No spec recorded.";
+  const spec = readText(specFile(repoRoot, task.id));
 
   return [
     `## Task`,

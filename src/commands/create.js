@@ -48,19 +48,18 @@ export async function createTask(args) {
   }
 
   const spec = `${specResult.value.trim()}\n`;
-  const savedTask = { ...task, spec };
   createTaskRecord(root, {
     id: taskId,
     spec,
-    task: savedTask,
+    task,
   });
 
   const issue = createIssue({
     cwd: root,
-    title: issueTitle(savedTask),
-    body: issueBody(savedTask),
+    title: issueTitle(task),
+    body: issueBody(root, task),
   });
-  saveTask(root, { ...savedTask, issueUrl: issue.url });
+  saveTask(root, { ...task, issueUrl: issue.url });
 
   console.log(`Project: ${project.name} (${project.path})`);
   console.log(`Created task ${taskId}`);

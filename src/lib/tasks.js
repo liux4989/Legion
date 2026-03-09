@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { ensureDir, exists, readJson, readText, writeJson, writeText } from "./fs.js";
+import { ensureDir, exists, readJson, writeJson, writeText } from "./fs.js";
 import { CliError } from "./errors.js";
 
 export const TASK_STATES = new Set([
@@ -35,10 +35,7 @@ export function createTaskRecord(repoRoot, data) {
   const dir = taskDir(repoRoot, data.id);
   ensureDir(dir);
   writeText(specFile(repoRoot, data.id), data.spec);
-  writeJson(taskFile(repoRoot, data.id), {
-    ...data.task,
-    spec: data.spec,
-  });
+  writeJson(taskFile(repoRoot, data.id), data.task);
 }
 
 export function loadTask(repoRoot, taskId) {
@@ -49,10 +46,6 @@ export function loadTask(repoRoot, taskId) {
   }
 
   const task = readJson(filePath);
-
-  if (!task.spec && exists(specFile(repoRoot, taskId))) {
-    task.spec = readText(specFile(repoRoot, taskId));
-  }
 
   if (!TASK_STATES.has(task.state)) {
     throw new CliError(`Task ${taskId} has invalid state: ${task.state}`);

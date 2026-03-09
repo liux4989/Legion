@@ -45,7 +45,7 @@ export async function prTask(args) {
       branchName: task.branchName,
       baseBranch: task.baseBranch,
       title: prTitle(task),
-      body: prBody(task),
+      body: prBody(root, task),
     });
 
     task.prUrl = pr.url;

@@ -1,11 +1,14 @@
 import { runCommand } from "./shell.js";
+import { readText } from "./fs.js";
+import { specFile } from "./tasks.js";
 import { CliError } from "./errors.js";
 
 export function issueTitle(task) {
   return `task(${task.id}): ${task.intent}`;
 }
 
-export function issueBody(task) {
+export function issueBody(repoRoot, task) {
+  const spec = readText(specFile(repoRoot, task.id));
   return [
     `Task ID: \`${task.id}\``,
     `State: \`${task.state}\``,
@@ -14,7 +17,7 @@ export function issueBody(task) {
     "",
     "Spec:",
     "",
-    task.spec.trim(),
+    spec.trim(),
   ].join("\n");
 }
 
