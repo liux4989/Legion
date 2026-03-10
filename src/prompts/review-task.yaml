@@ -1,8 +1,4 @@
-task:
-  type: "review"
-  id:
-    {{task_id}}
-  iteration: {{iteration}}
+iteration: {{iteration}}
 spec:
   path:
     {{spec_path}}
