@@ -1,6 +1,6 @@
 import { loadTask, saveTask, specFile, latestTrajectoryEntry, trajectoryFile } from "../lib/tasks.js";
 import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js";
-import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, resolveStartSha, workingTreeHasChanges } from "../lib/git.js";
+import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, hasUnpushedCommits, pushUnpushedCommits, resolveStartSha, workingTreeHasChanges } from "../lib/git.js";
 import { runCodexTaskAutoExit } from "../lib/codex.js";
 import { CliError } from "../lib/errors.js";
 import { renderPromptTemplate } from "../lib/prompt-template.js";
@@ -155,6 +155,10 @@ export async function runTask(args) {
 
   let task = loadTask(root, taskId);
   assertTaskState(task, ["ready", "fixing", "reviewing"], "run");
+
+  if (hasUnpushedCommits(root, task.baseBranch)) {
+    pushUnpushedCommits(root, task.baseBranch);
+  }
 
   const activeBranch = currentBranch(root);
   if (activeBranch !== task.branchName) {

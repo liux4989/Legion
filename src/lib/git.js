@@ -73,3 +73,23 @@ export function remoteName(cwd) {
 export function pushBranch(cwd, remote, branchName) {
   runCommand("git", ["push", "-u", remote, branchName], { cwd });
 }
+
+export function hasUnpushedCommits(cwd, branchName) {
+  const remote = remoteName(cwd);
+  if (!remote) return false;
+  const result = runCommand("git", ["rev-list", "--count", `${remote}/${branchName}..${branchName}`], {
+    cwd,
+    allowFailure: true,
+  });
+  if (result.status !== 0) return false;
+  return parseInt(result.stdout.trim(), 10) > 0;
+}
+
+export function pushUnpushedCommits(cwd, branchName) {
+  const remote = remoteName(cwd);
+  if (!remote) {
+    throw new CliError("No git remote configured.");
+  }
+  console.log(`Pushing unpushed commits on ${branchName} to ${remote}...`);
+  pushBranch(cwd, remote, branchName);
+}
