@@ -4,56 +4,73 @@ import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDif
 import { runCodexTaskAutoExit } from "../lib/codex.js";
 import { CliError } from "../lib/errors.js";
 import { resolveProjectContext } from "../lib/projects.js";
+import { yamlBlock, yamlString } from "../lib/prompt-template.js";
 
 const MAX_ITERATIONS = 3;
 
 function buildExecutePrompt(root, task) {
-  return `You are working on Legion task ${task.id}.
-
-Read the task spec at: ${specFile(root, task.id)}
-
-Inspect the repository, implement the requested change, and run relevant checks.
-
-Do not broaden scope beyond the spec.`;
+  return `task:
+  type: "execute"
+  id: ${yamlString(task.id)}
+spec:
+  path: ${yamlString(specFile(root, task.id))}
+instructions:
+  - "Inspect the repository."
+  - "Implement the requested change."
+  - "Run relevant checks."
+scope:
+  rule: "Do not broaden scope beyond the spec."
+`;
 }
 
 function buildFixPrompt(root, task) {
   const lastReview = latestTrajectoryEntry(root, task.id, "review");
 
-  return `You are working on Legion task ${task.id}.
-
-Read the task spec at: ${specFile(root, task.id)}
-
-A previous implementation was reviewed and rejected. Address the review feedback below, then run relevant checks.
-
-Do not broaden scope beyond the spec.
-
-Review feedback to address:
-${lastReview.feedback}`;
+  return `task:
+  type: "fix"
+  id: ${yamlString(task.id)}
+spec:
+  path: ${yamlString(specFile(root, task.id))}
+review:
+  status: "rejected"
+  feedback:
+${yamlBlock(lastReview.feedback, 2)}
+instructions:
+  - "Address the review feedback."
+  - "Run relevant checks."
+scope:
+  rule: "Do not broaden scope beyond the spec."
+`;
 }
 
 function buildReviewPrompt(root, task, iteration) {
   const trajFile = trajectoryFile(root, task.id);
-  return `Review task ${task.id} against the spec file at: ${specFile(root, task.id)}
-
-Use git to compare the current branch against base branch ${task.baseBranch}.
-
-Only check:
-- correctness
-- regressions
-- mismatch against the spec
-
-Do not request unrelated refactors or broader product changes.
-
-When done, append exactly one JSON line to: ${trajFile}
-
-The line must be valid JSON matching this schema (no extra keys, no wrapping):
-{"iteration":${iteration},"phase":"review","decision":"pass|fail","summary":"<one paragraph>","findings":[{"severity":"...","title":"...","file":"...","detail":"..."}],"feedback":"<summary + findings text if decision is fail, otherwise null>"}
-
-Rules:
-- Append only; do not modify existing content.
-- One JSON object per line, no trailing comma.
-- Ensure the file exists after you finish.`;
+  return `task:
+  type: "review"
+  id: ${yamlString(task.id)}
+  iteration: ${iteration}
+spec:
+  path: ${yamlString(specFile(root, task.id))}
+git:
+  compare_branch: ${yamlString(task.baseBranch)}
+review_scope:
+  - "correctness"
+  - "regressions"
+  - "mismatch against the spec"
+review_constraints:
+  - "Do not request unrelated refactors."
+  - "Do not request broader product changes."
+output:
+  trajectory_file: ${yamlString(trajFile)}
+  append_mode: true
+  json_line_schema:
+${yamlBlock(`{"iteration":${iteration},"phase":"review","decision":"pass|fail","summary":"<one paragraph>","findings":[{"severity":"...","title":"...","file":"...","detail":"..."}],"feedback":"<summary + findings text if decision is fail, otherwise null>"}`, 2)}
+  rules:
+    - "Append exactly one JSON object line."
+    - "Do not modify existing content."
+    - "Use one JSON object per line with no trailing comma."
+    - "Ensure the file exists after you finish."
+`;
 }
 
 async function executePhase(root, task, iteration) {
