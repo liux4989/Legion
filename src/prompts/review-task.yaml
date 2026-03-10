@@ -7,9 +7,9 @@ spec:
 git:
   start_sha: {{start_sha}}
 review_scope:
-  - "correctness"
-  - "regressions"
-  - "mismatch against the spec"
+  - "completeness": compare the implementation with spec to ensure all requirements are met and all acceptance criteria pass
+  - "out of scope": ensure no out-of-scope behaviors are added
+  - "bug": actionable errors that must be fixed
 review_constraints:
   - "Do not request unrelated refactors."
   - "Do not request broader product changes."
