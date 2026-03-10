@@ -35,5 +35,7 @@ stage_2_format:
       - "Unwanted behavior: If [condition], then the [system] shall [action]"
       - "Optional: Where [feature], the [system] shall [action]"
     edge_case: "Relevant failure cases, boundary conditions, and error handling expectations."
+output:
+  spec_file: {{spec_file}}
 interaction:
-  final_output_rule: "Only write final markdown after explicit approval."
+  final_output_rule: "Only write final markdown after explicit approval. Write the final spec to the spec_file path."

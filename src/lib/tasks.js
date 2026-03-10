@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { ensureDir, exists, readJson, writeJson, writeText } from "./fs.js";
+import { ensureDir, exists, readJson, writeJson } from "./fs.js";
 import { CliError } from "./errors.js";
 
 export const TASK_STATES = new Set([
@@ -34,7 +34,6 @@ export function specFile(repoRoot, taskId) {
 export function createTaskRecord(repoRoot, data) {
   const dir = taskDir(repoRoot, data.id);
   ensureDir(dir);
-  writeText(specFile(repoRoot, data.id), data.spec);
   writeJson(taskFile(repoRoot, data.id), data.task);
 }
 

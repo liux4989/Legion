@@ -1,10 +1,11 @@
-import { generateTextWithCodex } from "../lib/codex.js";
+import { runCodexTaskAutoExit } from "../lib/codex.js";
 import { currentBranch } from "../lib/git.js";
 import { createIssue, issueBody, issueTitle } from "../lib/issues.js";
-import { createTaskRecord, makeTaskId, saveTask } from "../lib/tasks.js";
+import { createTaskRecord, makeTaskId, saveTask, specFile, taskDir } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
 import { resolveProjectContext } from "../lib/projects.js";
 import { buildCreatePrompt } from "../lib/spec.js";
+import { ensureDir } from "../lib/fs.js";
 
 export async function createTask(args) {
   const intent = args.join(" ").trim();
@@ -40,22 +41,19 @@ export async function createTask(args) {
     lastError: null,
   };
 
-  const specResult = await generateTextWithCodex({
+  const specPath = specFile(root, taskId);
+  ensureDir(taskDir(root, taskId));
+
+  const result = await runCodexTaskAutoExit({
     repoRoot: root,
-    prompt: buildCreatePrompt(intent, taskId),
-    prefix: "legion-spec",
+    prompt: buildCreatePrompt(intent, taskId, specPath),
   });
 
-  if (!specResult.ok) {
-    throw new CliError(`Failed to generate spec: ${specResult.error}`, { cause: specResult.cause });
+  if (!result.ok) {
+    throw new CliError(`Failed to generate spec: ${result.error}`);
   }
 
-  const spec = `${specResult.value.trim()}\n`;
-  createTaskRecord(root, {
-    id: taskId,
-    spec,
-    task,
-  });
+  createTaskRecord(root, { id: taskId, task });
 
   console.log(`Project: ${project.name} (${project.path})`);
   console.log(`Created task ${taskId}`);
