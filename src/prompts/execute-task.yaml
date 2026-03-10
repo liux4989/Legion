@@ -4,8 +4,6 @@ task:
 spec:
   path: {{spec_path}}
 instructions:
-  - "Inspect the repository."
-  - "Implement the requested change."
-  - "Run relevant checks."
+  - "Implement the spec"
 scope:
   rule: "Do not broaden scope beyond the spec."
