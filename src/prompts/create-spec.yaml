@@ -1,4 +1,5 @@
 objective: "Turn the user request into an executable markdown spec."
+spec_file: {{spec_file}}
 intent:
   {{intent}}
 workflow:
@@ -26,8 +27,5 @@ stage_2_format:
     item_title: "US<N>: <short title>"
     user_story: "As a (role), I want (function) so that (business value)."
     acceptance_criteria: "EARS format"
-output:
-  spec_file:
-    {{spec_file}}
 interaction:
   final_output_rule: "Only write final markdown after explicit approval. Write the final spec to the spec_file path."
