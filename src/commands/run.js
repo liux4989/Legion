@@ -23,7 +23,7 @@ function buildFixPrompt(root, task, iteration) {
   return renderPromptTemplate("fix-task.yaml", {
     task_id: task.id,
     iteration,
-    review_feedback: lastReview.feedback,
+    review_findings: JSON.stringify(lastReview.findings ?? []),
     trajectory_file: trajectoryFile(root, task.id),
   });
 }
@@ -31,12 +31,14 @@ function buildFixPrompt(root, task, iteration) {
 function buildReviewPrompt(root, task, iteration) {
   const trajFile = trajectoryFile(root, task.id);
   const startSha = resolveStartSha(root, task.baseBranch);
+  const lastReview = iteration > 1 ? latestTrajectoryEntry(root, task.id, "review") : null;
   return renderPromptTemplate("review-task.yaml", {
     task_id: task.id,
     iteration,
     spec_path: specFile(root, task.id),
     start_sha: startSha,
     trajectory_file: trajFile,
+    prior_findings: JSON.stringify(lastReview?.findings ?? []),
   });
 }
 
