@@ -1,5 +1,4 @@
 objective: "Turn the user request into an executable markdown spec."
-spec_file: {{spec_file}}
 intent:
   {{intent}}
 workflow:
@@ -13,19 +12,19 @@ workflow:
     output: "Output only the stage_2_format for user review."
     revision: "Revise from user clarification and feedback."
     exit_condition: "Write the final file only after explicit human approval."
-stage_1_format:
-  heading: "Use a short markdown heading."
-  sections:
-    behaviors: "Well-defined user behaviors aligned to the user intent. Keep them minimal and do not expand beyond what the user asked."
-    goal: "Assumption about why this feature or fix exists."
-    reason: "Assumption about root cause or motivation."
-    noGoals: "Assumptions the human did not address but are reasonable to consider."
-stage_2_format:
-  title: "<short title>"
-  summary: "Background plus goal sentence."
-  userStories:
-    item_title: "US<N>: <short title>"
-    user_story: "As a (role), I want (function) so that (business value)."
-    acceptance_criteria: "EARS format"
-interaction:
-  final_output_rule: "Only write final markdown after explicit approval. Write the final spec to the spec_file path."
+output: 
+  stage_1_format:
+    heading: "Use a short markdown heading."
+    sections:
+      behaviors: "Well-defined user behaviors aligned to the user intent. Keep them minimal and do not expand beyond what the user asked."
+      goal: "Assumption about why this feature or fix exists."
+      reason: "Assumption about root cause or motivation."
+      noGoals: "Assumptions the human did not address but are reasonable to consider."
+  stage_2_format:
+    title: "<short title>"
+    summary: "Background plus goal sentence."
+    userStories:
+      item_title: "US<N>: <short title>"
+      user_story: "As a (role), I want (function) so that (business value)."
+      acceptance_criteria: "EARS format"
+  final_output_file: {{spec_file}}
