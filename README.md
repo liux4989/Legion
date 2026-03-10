@@ -68,15 +68,6 @@ tasks/
 
 ## Notes
 
-- `create` keeps a single inline interactive Codex session, but the prompt enforces staged HIL gates: approve structural intent first, then approve the spec, then write the final markdown spec.
-- The final spec is structured into:
-  - `Title`
-  - `Goal`
-  - `Scope`
-  - `Non-goals`
-  - `Requirements`
-  - `Success criteria`
-  - `Notes`
 - `run` launches codex with `--full-auto` and auto-advances through execute→review→fix phases without manual intervention.
 - The user can interact with codex during execution (it runs inline with `stdio: "inherit"`). Ctrl-C aborts the loop.
 - Review findings are fed back to codex as fix instructions on the next iteration.
