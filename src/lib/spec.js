@@ -1,46 +1,8 @@
-import { yamlBlock, yamlString } from "./prompt-template.js";
+import { renderPromptTemplate, yamlBlock, yamlString } from "./prompt-template.js";
 
 export function buildCreatePrompt(intent, taskId) {
-  const trimmedIntent = intent.trim();
-
-  return `task:
-  type: "create_spec"
-  id: ${yamlString(taskId)}
-objective: "Turn the user request into an executable markdown spec."
-intent:
-${yamlBlock(trimmedIntent, 1)}
-workflow:
-  stage_1:
-    goal: "Turn the intent into well-defined user behaviors aligned to the user intent."
-    output: "Output only the stage_1_format for user review."
-    revision: "Revise from user clarification and feedback."
-    exit_condition: "Proceed to stage_2 only after explicit human approval."
-  stage_2:
-    goal: "Normalize the approved Stage 1 behaviors to executable spec."
-    output: "Output only the stage_2_format for user review."
-    revision: "Revise from user clarification and feedback."
-    exit_condition: "Write the final file only after explicit human approval."
-stage_1_format:
-  heading: "Use a short markdown heading."
-  sections:
-    behaviors: "Well-defined user behaviors aligned to the user intent. Keep them minimal and do not expand beyond what the user asked."
-    goal: "Assumption about why this feature or fix exists."
-    reason: "Assumption about root cause or motivation."
-    noGoals: "Assumptions the human did not address but are reasonable to consider."
-stage_2_format:
-  title: "\`task#<id>: <short title>\`"
-  summary: "Background plus goal sentence."
-  userStories:
-    item_title: "US<N>: <short title>"
-    user_story: "As a (role), I want (function) so that (business value)."
-    acceptance_criteria:
-      - "Ubiquitous: The [system] shall [action]"
-      - "Event-driven: When [event], the [system] shall [action]"
-      - "State-driven: While [state], the [system] shall [action]"
-      - "Unwanted behavior: If [condition], then the [system] shall [action]"
-      - "Optional: Where [feature], the [system] shall [action]"
-    edge_case: "Relevant failure cases, boundary conditions, and error handling expectations."
-interaction:
-  final_output_rule: "Only write final markdown after explicit approval."
-`;
+  return renderPromptTemplate("create-spec.yaml", {
+    task_id: yamlString(taskId),
+    intent_block: yamlBlock(intent.trim(), 1),
+  });
 }

@@ -1,0 +1,14 @@
+task:
+  type: "fix"
+  id: {{task_id}}
+spec:
+  path: {{spec_path}}
+review:
+  status: "rejected"
+  feedback:
+{{review_feedback_block}}
+instructions:
+  - "Address the review feedback."
+  - "Run relevant checks."
+scope:
+  rule: "Do not broaden scope beyond the spec."

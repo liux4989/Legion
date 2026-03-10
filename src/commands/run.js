@@ -3,74 +3,38 @@ import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js
 import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, workingTreeHasChanges } from "../lib/git.js";
 import { runCodexTaskAutoExit } from "../lib/codex.js";
 import { CliError } from "../lib/errors.js";
+import { renderPromptTemplate, yamlBlock, yamlString } from "../lib/prompt-template.js";
 import { resolveProjectContext } from "../lib/projects.js";
-import { yamlBlock, yamlString } from "../lib/prompt-template.js";
 
 const MAX_ITERATIONS = 3;
 
 function buildExecutePrompt(root, task) {
-  return `task:
-  type: "execute"
-  id: ${yamlString(task.id)}
-spec:
-  path: ${yamlString(specFile(root, task.id))}
-instructions:
-  - "Inspect the repository."
-  - "Implement the requested change."
-  - "Run relevant checks."
-scope:
-  rule: "Do not broaden scope beyond the spec."
-`;
+  return renderPromptTemplate("execute-task.yaml", {
+    task_id: yamlString(task.id),
+    spec_path: yamlString(specFile(root, task.id)),
+  });
 }
 
 function buildFixPrompt(root, task) {
   const lastReview = latestTrajectoryEntry(root, task.id, "review");
 
-  return `task:
-  type: "fix"
-  id: ${yamlString(task.id)}
-spec:
-  path: ${yamlString(specFile(root, task.id))}
-review:
-  status: "rejected"
-  feedback:
-${yamlBlock(lastReview.feedback, 2)}
-instructions:
-  - "Address the review feedback."
-  - "Run relevant checks."
-scope:
-  rule: "Do not broaden scope beyond the spec."
-`;
+  return renderPromptTemplate("fix-task.yaml", {
+    task_id: yamlString(task.id),
+    spec_path: yamlString(specFile(root, task.id)),
+    review_feedback_block: yamlBlock(lastReview.feedback, 2),
+  });
 }
 
 function buildReviewPrompt(root, task, iteration) {
   const trajFile = trajectoryFile(root, task.id);
-  return `task:
-  type: "review"
-  id: ${yamlString(task.id)}
-  iteration: ${iteration}
-spec:
-  path: ${yamlString(specFile(root, task.id))}
-git:
-  compare_branch: ${yamlString(task.baseBranch)}
-review_scope:
-  - "correctness"
-  - "regressions"
-  - "mismatch against the spec"
-review_constraints:
-  - "Do not request unrelated refactors."
-  - "Do not request broader product changes."
-output:
-  trajectory_file: ${yamlString(trajFile)}
-  append_mode: true
-  json_line_schema:
-${yamlBlock(`{"iteration":${iteration},"phase":"review","decision":"pass|fail","summary":"<one paragraph>","findings":[{"severity":"...","title":"...","file":"...","detail":"..."}],"feedback":"<summary + findings text if decision is fail, otherwise null>"}`, 2)}
-  rules:
-    - "Append exactly one JSON object line."
-    - "Do not modify existing content."
-    - "Use one JSON object per line with no trailing comma."
-    - "Ensure the file exists after you finish."
-`;
+  return renderPromptTemplate("review-task.yaml", {
+    task_id: yamlString(task.id),
+    iteration,
+    spec_path: yamlString(specFile(root, task.id)),
+    base_branch: yamlString(task.baseBranch),
+    trajectory_file: yamlString(trajFile),
+    json_line_schema_block: yamlBlock(`{"iteration":${iteration},"phase":"review","decision":"pass|fail","summary":"<one paragraph>","findings":[{"severity":"...","title":"...","file":"...","detail":"..."}],"feedback":"<summary + findings text if decision is fail, otherwise null>"}`, 2),
+  });
 }
 
 async function executePhase(root, task, iteration) {

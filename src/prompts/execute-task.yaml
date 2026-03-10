@@ -1,0 +1,11 @@
+task:
+  type: "execute"
+  id: {{task_id}}
+spec:
+  path: {{spec_path}}
+instructions:
+  - "Inspect the repository."
+  - "Implement the requested change."
+  - "Run relevant checks."
+scope:
+  rule: "Do not broaden scope beyond the spec."

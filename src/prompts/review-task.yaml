@@ -1,0 +1,25 @@
+task:
+  type: "review"
+  id: {{task_id}}
+  iteration: {{iteration}}
+spec:
+  path: {{spec_path}}
+git:
+  compare_branch: {{base_branch}}
+review_scope:
+  - "correctness"
+  - "regressions"
+  - "mismatch against the spec"
+review_constraints:
+  - "Do not request unrelated refactors."
+  - "Do not request broader product changes."
+output:
+  trajectory_file: {{trajectory_file}}
+  append_mode: true
+  json_line_schema:
+{{json_line_schema_block}}
+  rules:
+    - "Append exactly one JSON object line."
+    - "Do not modify existing content."
+    - "Use one JSON object per line with no trailing comma."
+    - "Ensure the file exists after you finish."
