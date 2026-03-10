@@ -1,19 +1,37 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { runCodexTaskInteractive } from "../lib/codex.js";
 import { currentBranch } from "../lib/git.js";
-import { createIssue, issueBody, issueTitle } from "../lib/issues.js";
-import { createTaskRecord, loadTask, makeTaskId, saveTask, specFile, taskDir } from "../lib/tasks.js";
-import { CliError, formatError } from "../lib/errors.js";
+import { createTaskRecord, makeTaskId, specFile, taskDir } from "../lib/tasks.js";
+import { CliError } from "../lib/errors.js";
 import { resolveProjectContext } from "../lib/projects.js";
 import { buildCreatePrompt } from "../lib/spec.js";
 import { ensureDir } from "../lib/fs.js";
 import { spawnDetached } from "../lib/shell.js";
 
-const CLI_ENTRY = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../bin/legion.js");
-
 function enqueueIssueCreation(repoRoot, taskId) {
-  spawnDetached(process.execPath, [CLI_ENTRY, "__create-issue", taskId], {
+  const workerScript = [
+    "const repoRoot = process.argv[1];",
+    "const taskId = process.argv[2];",
+    "const { loadTask, saveTask } = await import('./src/lib/tasks.js');",
+    "const { createIssue, issueBody, issueTitle } = await import('./src/lib/issues.js');",
+    "const { formatError } = await import('./src/lib/errors.js');",
+    "const task = loadTask(repoRoot, taskId);",
+    "try {",
+    "  const issue = createIssue({",
+    "    cwd: repoRoot,",
+    "    title: issueTitle(task),",
+    "    body: issueBody(repoRoot, task),",
+    "  });",
+    "  task.issueUrl = issue.url;",
+    "  task.issueError = null;",
+    "  saveTask(repoRoot, task);",
+    "} catch (error) {",
+    "  task.issueError = formatError(error);",
+    "  saveTask(repoRoot, task);",
+    "  throw error;",
+    "}",
+  ].join("\n");
+
+  spawnDetached(process.execPath, ["--input-type=module", "-e", workerScript, repoRoot, taskId], {
     cwd: repoRoot,
   });
 }
@@ -69,32 +87,4 @@ export async function createTask(args) {
   console.log(`Spec: tasks/task_${taskId}/spec.md`);
   console.log(`Issue: pending`);
   console.log(`Task: tasks/task_${taskId}/task.json`);
-}
-
-export async function createTaskIssue(args) {
-  const taskId = args[0];
-
-  if (!taskId) {
-    throw new CliError("Usage: legion __create-issue <task-id>");
-  }
-
-  const project = resolveProjectContext();
-  const root = project.root;
-  const task = loadTask(root, taskId);
-
-  try {
-    const issue = createIssue({
-      cwd: root,
-      title: issueTitle(task),
-      body: issueBody(root, task),
-    });
-
-    task.issueUrl = issue.url;
-    task.issueError = null;
-    saveTask(root, task);
-  } catch (error) {
-    task.issueError = formatError(error);
-    saveTask(root, task);
-    throw error;
-  }
 }

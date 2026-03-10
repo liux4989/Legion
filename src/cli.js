@@ -1,4 +1,4 @@
-import { createTask, createTaskIssue } from "./commands/create.js";
+import { createTask } from "./commands/create.js";
 import { runTask } from "./commands/run.js";
 import { prTask } from "./commands/pr.js";
 import { CliError, formatError } from "./lib/errors.js";
@@ -19,8 +19,6 @@ export async function main(argv) {
     switch (command) {
       case "create":
         return await createTask(rest);
-      case "__create-issue":
-        return await createTaskIssue(rest);
       case "run":
         return await runTask(rest);
       case "pr":
