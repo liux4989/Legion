@@ -1,4 +1,4 @@
-import { loadTask, saveTask, specFile, appendTrajectoryEntry, latestTrajectoryEntry, trajectoryFile } from "../lib/tasks.js";
+import { loadTask, saveTask, specFile, latestTrajectoryEntry, trajectoryFile } from "../lib/tasks.js";
 import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js";
 import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, resolveStartSha, workingTreeHasChanges } from "../lib/git.js";
 import { runCodexTaskAutoExit } from "../lib/codex.js";
@@ -8,19 +8,23 @@ import { resolveProjectContext } from "../lib/projects.js";
 
 const MAX_ITERATIONS = 3;
 
-function buildExecutePrompt(root, task) {
+function buildExecutePrompt(root, task, iteration) {
   return renderPromptTemplate("execute-task.yaml", {
     task_id: yamlString(task.id),
+    iteration,
     spec_path: yamlString(specFile(root, task.id)),
+    trajectory_file: yamlString(trajectoryFile(root, task.id)),
   });
 }
 
-function buildFixPrompt(root, task) {
+function buildFixPrompt(root, task, iteration) {
   const lastReview = latestTrajectoryEntry(root, task.id, "review");
 
   return renderPromptTemplate("fix-task.yaml", {
     task_id: yamlString(task.id),
+    iteration,
     review_feedback_block: yamlBlock(lastReview.feedback, 1),
+    trajectory_file: yamlString(trajectoryFile(root, task.id)),
   });
 }
 
@@ -33,7 +37,6 @@ function buildReviewPrompt(root, task, iteration) {
     spec_path: yamlString(specFile(root, task.id)),
     start_sha: yamlString(startSha),
     trajectory_file: yamlString(trajFile),
-    json_line_schema_block: yamlBlock(`{"iteration":${iteration},"phase":"review","decision":"pass|fail","summary":"<one paragraph>","findings":[{"severity":"...","title":"...","file":"...","detail":"..."}],"feedback":"<summary + findings text if decision is fail, otherwise null>"}`, 2),
   });
 }
 
@@ -44,7 +47,7 @@ async function executePhase(root, task, iteration) {
 
   const result = await runCodexTaskAutoExit({
     repoRoot: root,
-    prompt: buildExecutePrompt(root, task),
+    prompt: buildExecutePrompt(root, task, iteration),
   });
 
   if (!result.ok) {
@@ -56,11 +59,11 @@ async function executePhase(root, task, iteration) {
     commitAll(root, `task(${task.id}): ${task.intent}`);
   }
 
-  appendTrajectoryEntry(root, task.id, {
-    iteration,
-    phase: "execute",
-    summary: result.summary,
-  });
+  const execution = latestTrajectoryEntry(root, task.id, "execute");
+  if (!execution || execution.iteration !== iteration) {
+    recordError(root, task, "Codex did not append an execute entry to the trajectory file.");
+    return false;
+  }
   transitionTask(task, "fixing_succeeded");
   task.lastError = null;
   saveTask(root, task);
@@ -74,7 +77,7 @@ async function fixPhase(root, task, iteration) {
 
   const result = await runCodexTaskAutoExit({
     repoRoot: root,
-    prompt: buildFixPrompt(root, task),
+    prompt: buildFixPrompt(root, task, iteration),
   });
 
   if (!result.ok) {
@@ -86,11 +89,11 @@ async function fixPhase(root, task, iteration) {
     commitAll(root, `task(${task.id}): ${task.intent}`);
   }
 
-  appendTrajectoryEntry(root, task.id, {
-    iteration,
-    phase: "fix",
-    summary: result.summary,
-  });
+  const fixEntry = latestTrajectoryEntry(root, task.id, "fix");
+  if (!fixEntry || fixEntry.iteration !== iteration) {
+    recordError(root, task, "Codex did not append a fix entry to the trajectory file.");
+    return false;
+  }
   transitionTask(task, "fixing_succeeded");
   task.lastError = null;
   saveTask(root, task);
