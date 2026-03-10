@@ -7,10 +7,10 @@ spec:
   path:
     {{spec_path}}
 instructions:
-  - "Implement the spec. Cover every acceptance criterion"
-  - "Serialize output.json_line_schema to a single JSON line and append it to output.trajectory_file when the task is complete."
+  - "Implement the spec and cover every acceptance criterion."
+  - "When complete, append output.json_line_schema to output.trajectory_file as a single JSON line."
 scope:
-  rule: "Do not broaden scope beyond the spec."
+  rule: "Stay within the spec."
 output:
   trajectory_file:
     {{trajectory_file}}
