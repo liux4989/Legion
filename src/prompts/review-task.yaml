@@ -5,7 +5,7 @@ task:
 spec:
   path: {{spec_path}}
 git:
-  compare_branch: {{base_branch}}
+  start_sha: {{start_sha}}
 review_scope:
   - "correctness"
   - "regressions"
@@ -18,8 +18,3 @@ output:
   append_mode: true
   json_line_schema:
 {{json_line_schema_block}}
-  rules:
-    - "Append exactly one JSON object line."
-    - "Do not modify existing content."
-    - "Use one JSON object per line with no trailing comma."
-    - "Ensure the file exists after you finish."

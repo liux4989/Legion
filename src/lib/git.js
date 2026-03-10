@@ -34,6 +34,10 @@ export function checkoutBranch(cwd, branchName, baseBranch) {
   runCommand("git", ["checkout", "-b", branchName, baseBranch], { cwd });
 }
 
+export function resolveStartSha(cwd, baseBranch) {
+  return runCommand("git", ["rev-parse", baseBranch], { cwd }).stdout.trim();
+}
+
 export function hasDiffAgainst(cwd, baseBranch) {
   const committed = runCommand("git", ["diff", "--quiet", baseBranch, "HEAD"], {
     cwd,

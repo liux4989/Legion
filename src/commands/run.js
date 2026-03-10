@@ -1,6 +1,6 @@
 import { loadTask, saveTask, specFile, appendTrajectoryEntry, latestTrajectoryEntry, trajectoryFile } from "../lib/tasks.js";
 import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js";
-import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, workingTreeHasChanges } from "../lib/git.js";
+import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, resolveStartSha, workingTreeHasChanges } from "../lib/git.js";
 import { runCodexTaskAutoExit } from "../lib/codex.js";
 import { CliError } from "../lib/errors.js";
 import { renderPromptTemplate, yamlBlock, yamlString } from "../lib/prompt-template.js";
@@ -27,11 +27,12 @@ function buildFixPrompt(root, task) {
 
 function buildReviewPrompt(root, task, iteration) {
   const trajFile = trajectoryFile(root, task.id);
+  const startSha = resolveStartSha(root, task.baseBranch);
   return renderPromptTemplate("review-task.yaml", {
     task_id: yamlString(task.id),
     iteration,
     spec_path: yamlString(specFile(root, task.id)),
-    base_branch: yamlString(task.baseBranch),
+    start_sha: yamlString(startSha),
     trajectory_file: yamlString(trajFile),
     json_line_schema_block: yamlBlock(`{"iteration":${iteration},"phase":"review","decision":"pass|fail","summary":"<one paragraph>","findings":[{"severity":"...","title":"...","file":"...","detail":"..."}],"feedback":"<summary + findings text if decision is fail, otherwise null>"}`, 2),
   });
