@@ -4,21 +4,15 @@ intent:
 rules:
   - "Run the workflow inside the current create session."
   - "Start at stage_1."
-  - "After explicit human approval for the current stage, immediately continue to the next stage without asking for permission to proceed."
-  - "Do not proceed to the next stage without explicit human approval."
   - "Output only the format for the active stage."
-  - "Do not write output.final_output_file until stage_2 is explicitly approved."
+  - "Revise from user clarification and feedback."
   - "After writing output.final_output_file, reply with a short confirmation that includes the final path and stop."
 workflow:
   stage_1:
     goal: "Turn the intent into well-defined user behaviors aligned to the user intent."
-    output: "Output only the stage_1_format for user review."
-    revision: "Revise from user clarification and feedback."
     exit_condition: "Proceed to stage_2 only after explicit human approval."
   stage_2:
     goal: "Normalize the approved Stage 1 behaviors to executable spec."
-    output: "Output only the stage_2_format for user review."
-    revision: "Revise from user clarification and feedback."
     exit_condition: "Write the final file only after explicit human approval."
 output: 
   stage_1_format:
@@ -27,12 +21,12 @@ output:
       behaviors: "Well-defined user behaviors aligned to the user intent. Keep them minimal and do not expand beyond what the user asked."
       goal: "Assumption about why this feature or fix exists."
       reason: "Assumption about root cause or motivation."
-      noGoals: "Assumptions the human did not address but are reasonable to consider."
+      nonGoals: "Assumptions the human did not address but are reasonable to consider."
   stage_2_format:
     title: "<short title>"
     summary: "Background plus goal sentence."
     userStories:
-      item_title: "US<N>: <short title>"
-      user_story: "As a (role), I want (function) so that (business value)."
-      acceptance_criteria: "EARS format"
+      - title: "US<N>: <short title>"
+        user_story: "As a (role), I want (function) so that (business value)."
+        acceptance_criteria: "EARS format"
   final_output_file: {{spec_file}}
