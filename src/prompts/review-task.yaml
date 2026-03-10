@@ -1,11 +1,14 @@
 task:
   type: "review"
-  id: {{task_id}}
+  id: |-
+    {{task_id}}
   iteration: {{iteration}}
 spec:
-  path: {{spec_path}}
+  path: |-
+    {{spec_path}}
 git:
-  start_sha: {{start_sha}}
+  start_sha: |-
+    {{start_sha}}
 review_scope:
   - "completeness": compare the implementation with spec to ensure all requirements are met and all acceptance criteria pass
   - "out of scope": ensure no out-of-scope behaviors are added
@@ -14,7 +17,8 @@ review_constraints:
   - "Do not request unrelated refactors."
   - "Do not request broader product changes."
 output:
-  trajectory_file: {{trajectory_file}}
+  trajectory_file: |-
+    {{trajectory_file}}
   append_mode: true
   json_line_schema: |-
     {"iteration":{{iteration}},"phase":"review","decision":"pass|fail","summary":"<one paragraph>","findings":[{"severity":"...","title":"...","file":"...","detail":"..."}],"feedback":"<summary + findings text if decision is fail, otherwise null>"}

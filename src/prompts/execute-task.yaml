@@ -1,16 +1,19 @@
 task:
   type: "execute"
-  id: {{task_id}}
+  id: |-
+    {{task_id}}
   iteration: {{iteration}}
 spec:
-  path: {{spec_path}}
+  path: |-
+    {{spec_path}}
 instructions:
   - "Implement the spec."
   - "Append exactly one JSON line matching output.json_line_schema to output.trajectory_file when the task is complete."
 scope:
   rule: "Do not broaden scope beyond the spec."
 output:
-  trajectory_file: {{trajectory_file}}
+  trajectory_file: |-
+    {{trajectory_file}}
   append_mode: true
   json_line_schema: |-
     {"iteration":{{iteration}},"phase":"execute","summary":"<one paragraph>"}

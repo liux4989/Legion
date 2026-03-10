@@ -3,17 +3,17 @@ import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js
 import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, resolveStartSha, workingTreeHasChanges } from "../lib/git.js";
 import { runCodexTaskAutoExit } from "../lib/codex.js";
 import { CliError } from "../lib/errors.js";
-import { renderPromptTemplate, yamlBlock, yamlString } from "../lib/prompt-template.js";
+import { renderPromptTemplate } from "../lib/prompt-template.js";
 import { resolveProjectContext } from "../lib/projects.js";
 
 const MAX_ITERATIONS = 3;
 
 function buildExecutePrompt(root, task, iteration) {
   return renderPromptTemplate("execute-task.yaml", {
-    task_id: yamlString(task.id),
+    task_id: task.id,
     iteration,
-    spec_path: yamlString(specFile(root, task.id)),
-    trajectory_file: yamlString(trajectoryFile(root, task.id)),
+    spec_path: specFile(root, task.id),
+    trajectory_file: trajectoryFile(root, task.id),
   });
 }
 
@@ -21,10 +21,10 @@ function buildFixPrompt(root, task, iteration) {
   const lastReview = latestTrajectoryEntry(root, task.id, "review");
 
   return renderPromptTemplate("fix-task.yaml", {
-    task_id: yamlString(task.id),
+    task_id: task.id,
     iteration,
-    review_feedback_block: yamlBlock(lastReview.feedback, 1),
-    trajectory_file: yamlString(trajectoryFile(root, task.id)),
+    review_feedback: lastReview.feedback,
+    trajectory_file: trajectoryFile(root, task.id),
   });
 }
 
@@ -32,11 +32,11 @@ function buildReviewPrompt(root, task, iteration) {
   const trajFile = trajectoryFile(root, task.id);
   const startSha = resolveStartSha(root, task.baseBranch);
   return renderPromptTemplate("review-task.yaml", {
-    task_id: yamlString(task.id),
+    task_id: task.id,
     iteration,
-    spec_path: yamlString(specFile(root, task.id)),
-    start_sha: yamlString(startSha),
-    trajectory_file: yamlString(trajFile),
+    spec_path: specFile(root, task.id),
+    start_sha: startSha,
+    trajectory_file: trajFile,
   });
 }
 
