@@ -133,3 +133,15 @@ export function runCommandInheritAsync(command, args, options = {}) {
     options.onChild?.(child);
   });
 }
+
+export function spawnDetached(command, args, options = {}) {
+  const child = spawn(command, args, {
+    cwd: options.cwd,
+    env: { ...process.env, ...options.env },
+    detached: true,
+    stdio: "ignore",
+  });
+
+  child.on("error", () => {});
+  child.unref();
+}

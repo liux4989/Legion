@@ -1,11 +1,22 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { runCodexTaskInteractive } from "../lib/codex.js";
 import { currentBranch } from "../lib/git.js";
 import { createIssue, issueBody, issueTitle } from "../lib/issues.js";
-import { createTaskRecord, makeTaskId, saveTask, specFile, taskDir } from "../lib/tasks.js";
-import { CliError } from "../lib/errors.js";
+import { createTaskRecord, loadTask, makeTaskId, saveTask, specFile, taskDir } from "../lib/tasks.js";
+import { CliError, formatError } from "../lib/errors.js";
 import { resolveProjectContext } from "../lib/projects.js";
 import { buildCreatePrompt } from "../lib/spec.js";
 import { ensureDir } from "../lib/fs.js";
+import { spawnDetached } from "../lib/shell.js";
+
+const CLI_ENTRY = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../bin/legion.js");
+
+function enqueueIssueCreation(repoRoot, taskId) {
+  spawnDetached(process.execPath, [CLI_ENTRY, "__create-issue", taskId], {
+    cwd: repoRoot,
+  });
+}
 
 export async function createTask(args) {
   const intent = args.join(" ").trim();
@@ -20,12 +31,6 @@ export async function createTask(args) {
   const now = new Date().toISOString();
   const taskId = makeTaskId(root);
 
-  const issue = createIssue({
-    cwd: root,
-    title: intent,
-    body: "",
-  });
-
   const branchName = `task/${taskId}`;
 
   const task = {
@@ -36,7 +41,8 @@ export async function createTask(args) {
     branchName,
     createdAt: now,
     updatedAt: now,
-    issueUrl: issue.url,
+    issueUrl: null,
+    issueError: null,
     prUrl: null,
     lastError: null,
   };
@@ -54,12 +60,41 @@ export async function createTask(args) {
   }
 
   createTaskRecord(root, { id: taskId, task });
+  enqueueIssueCreation(root, taskId);
 
   console.log(`Project: ${project.name} (${project.path})`);
   console.log(`Created task ${taskId}`);
   console.log(`State: ready`);
   console.log(`Branch: ${branchName}`);
   console.log(`Spec: tasks/task_${taskId}/spec.md`);
-  console.log(`Issue: ${issue.url}`);
+  console.log(`Issue: pending`);
   console.log(`Task: tasks/task_${taskId}/task.json`);
+}
+
+export async function createTaskIssue(args) {
+  const taskId = args[0];
+
+  if (!taskId) {
+    throw new CliError("Usage: legion __create-issue <task-id>");
+  }
+
+  const project = resolveProjectContext();
+  const root = project.root;
+  const task = loadTask(root, taskId);
+
+  try {
+    const issue = createIssue({
+      cwd: root,
+      title: issueTitle(task),
+      body: issueBody(root, task),
+    });
+
+    task.issueUrl = issue.url;
+    task.issueError = null;
+    saveTask(root, task);
+  } catch (error) {
+    task.issueError = formatError(error);
+    saveTask(root, task);
+    throw error;
+  }
 }
