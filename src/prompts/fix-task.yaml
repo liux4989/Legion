@@ -1,15 +1,15 @@
 task:
   type: "fix"
-  id: |-
+  id:
     {{task_id}}
   iteration: {{iteration}}
-review_feedback: |-
+review_feedback:
   {{review_feedback}}
 instructions:
   - "Fix only the issues raised in review_feedback. Do not address anything else."
   - "Append exactly one JSON line matching output.json_line_schema to output.trajectory_file when the fixes are complete."
 output:
-  trajectory_file: |-
+  trajectory_file:
     {{trajectory_file}}
   append_mode: true
   json_line_schema: |-

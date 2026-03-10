@@ -1,9 +1,9 @@
 task:
   type: "create_spec"
-  id: |-
+  id:
     {{task_id}}
 objective: "Turn the user request into an executable markdown spec."
-intent: |-
+intent:
   {{intent}}
 workflow:
   stage_1:
@@ -32,7 +32,7 @@ stage_2_format:
     acceptance_criteria: "EARS format"
     edge_case: "Relevant failure cases, boundary conditions, and error handling expectations."
 output:
-  spec_file: |-
+  spec_file:
     {{spec_file}}
 interaction:
   final_output_rule: "Only write final markdown after explicit approval. Write the final spec to the spec_file path."

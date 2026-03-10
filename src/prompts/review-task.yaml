@@ -1,13 +1,13 @@
 task:
   type: "review"
-  id: |-
+  id:
     {{task_id}}
   iteration: {{iteration}}
 spec:
-  path: |-
+  path:
     {{spec_path}}
 git:
-  start_sha: |-
+  start_sha:
     {{start_sha}}
 review_scope:
   - "completeness": compare the implementation with spec to ensure all requirements are met and all acceptance criteria pass
@@ -17,7 +17,7 @@ review_constraints:
   - "Do not request unrelated refactors."
   - "Do not request broader product changes."
 output:
-  trajectory_file: |-
+  trajectory_file:
     {{trajectory_file}}
   append_mode: true
   json_line_schema: |-

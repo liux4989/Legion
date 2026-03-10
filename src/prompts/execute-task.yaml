@@ -1,10 +1,10 @@
 task:
   type: "execute"
-  id: |-
+  id:
     {{task_id}}
   iteration: {{iteration}}
 spec:
-  path: |-
+  path:
     {{spec_path}}
 instructions:
   - "Implement the spec."
@@ -12,7 +12,7 @@ instructions:
 scope:
   rule: "Do not broaden scope beyond the spec."
 output:
-  trajectory_file: |-
+  trajectory_file:
     {{trajectory_file}}
   append_mode: true
   json_line_schema: |-
