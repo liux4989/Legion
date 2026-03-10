@@ -20,8 +20,7 @@ function buildFixPrompt(root, task) {
 
   return renderPromptTemplate("fix-task.yaml", {
     task_id: yamlString(task.id),
-    spec_path: yamlString(specFile(root, task.id)),
-    review_feedback_block: yamlBlock(lastReview.feedback, 2),
+    review_feedback_block: yamlBlock(lastReview.feedback, 1),
   });
 }
 
