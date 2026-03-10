@@ -22,6 +22,13 @@ review_constraints:
 output:
   trajectory_file:
     {{trajectory_file}}
-  append_mode: true
-  json_line_schema: |-
-    {"iteration":{{iteration}},"phase":"review","decision":"pass|fail","summary":"<one paragraph>","findings":[{"severity":"...","title":"...","file":"...","detail":"..."}]}
+  json_line_schema:
+    iteration: "{{iteration}}"
+    phase: "review"
+    decision: "pass|fail"
+    summary: "<one paragraph>"
+    findings:
+      - severity: "..."
+        title: "..."
+        file: "..."
+        detail: "..."

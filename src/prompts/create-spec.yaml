@@ -30,7 +30,6 @@ stage_2_format:
     item_title: "US<N>: <short title>"
     user_story: "As a (role), I want (function) so that (business value)."
     acceptance_criteria: "EARS format"
-    edge_case: "Relevant failure cases, boundary conditions, and error handling expectations."
 output:
   spec_file:
     {{spec_file}}
