@@ -62,11 +62,6 @@ export function trajectoryFile(repoRoot, taskId) {
   return path.join(taskDir(repoRoot, taskId), "trajectory.jsonl");
 }
 
-export function appendTrajectoryEntry(repoRoot, taskId, entry) {
-  const file = trajectoryFile(repoRoot, taskId);
-  const line = JSON.stringify({ ...entry, timestamp: new Date().toISOString() }) + "\n";
-  fs.appendFileSync(file, line);
-}
 
 export function readTrajectory(repoRoot, taskId) {
   const file = trajectoryFile(repoRoot, taskId);
