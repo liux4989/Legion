@@ -57,20 +57,13 @@ Rules:
 }
 
 async function executePhase(root, task, iteration) {
-  const isFirstRun = task.state === "ready";
-  if (isFirstRun) {
-    transitionTask(task, "start_fixing");
-  }
+  transitionTask(task, "start_fixing");
   task.lastError = null;
   saveTask(root, task);
 
-  const prompt = isFirstRun
-    ? buildExecutePrompt(root, task)
-    : buildFixPrompt(root, task);
-
   const result = await runCodexTaskAutoExit({
     repoRoot: root,
-    prompt,
+    prompt: buildExecutePrompt(root, task),
   });
 
   if (!result.ok) {
@@ -91,6 +84,36 @@ async function executePhase(root, task, iteration) {
   task.lastError = null;
   saveTask(root, task);
   console.log(`\n── execute done ── state: reviewing`);
+  return true;
+}
+
+async function fixPhase(root, task, iteration) {
+  task.lastError = null;
+  saveTask(root, task);
+
+  const result = await runCodexTaskAutoExit({
+    repoRoot: root,
+    prompt: buildFixPrompt(root, task),
+  });
+
+  if (!result.ok) {
+    recordError(root, task, result.error);
+    return false;
+  }
+
+  if (workingTreeHasChanges(root)) {
+    commitAll(root, `task(${task.id}): ${task.intent}`);
+  }
+
+  appendTrajectoryEntry(root, task.id, {
+    iteration,
+    phase: "fix",
+    summary: result.summary,
+  });
+  transitionTask(task, "fixing_succeeded");
+  task.lastError = null;
+  saveTask(root, task);
+  console.log(`\n── fix done ── state: reviewing`);
   return true;
 }
 
@@ -161,8 +184,13 @@ export async function runTask(args) {
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     task = loadTask(root, taskId);
 
-    if (task.state === "ready" || task.state === "fixing") {
+    if (task.state === "ready") {
       if (!await executePhase(root, task, i + 1)) break;
+      task = loadTask(root, taskId);
+    }
+
+    if (task.state === "fixing") {
+      if (!await fixPhase(root, task, i + 1)) break;
       task = loadTask(root, taskId);
     }
 

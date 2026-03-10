@@ -63,6 +63,7 @@ tasks/
   task_<id>/
     spec.md
     task.json
+    trajectory.jsonl
 ```
 
 ## Notes
