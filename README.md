@@ -66,6 +66,8 @@ tasks/
     trajectory.jsonl
 ```
 
+Task IDs are Legion-generated short random IDs such as `t_8f3k2m`. They are not derived from GitHub issue numbers.
+
 ## Notes
 
 - `run` launches codex with `--full-auto` and auto-advances through execute→review→fix phases without manual intervention.

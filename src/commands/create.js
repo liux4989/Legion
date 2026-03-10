@@ -18,6 +18,7 @@ export async function createTask(args) {
   const root = project.root;
   const baseBranch = currentBranch(root) || "main";
   const now = new Date().toISOString();
+  const taskId = makeTaskId(root);
 
   const issue = createIssue({
     cwd: root,
@@ -25,7 +26,6 @@ export async function createTask(args) {
     body: "",
   });
 
-  const taskId = makeTaskId(issue.number);
   const branchName = `task/${taskId}`;
 
   const task = {

@@ -29,10 +29,5 @@ export function createIssue({ cwd, title, body }) {
     throw new CliError("Issue creation succeeded but no issue URL was returned.");
   }
 
-  const match = url.match(/\/(\d+)$/);
-  if (!match) {
-    throw new CliError(`Could not parse issue number from URL: ${url}`);
-  }
-
-  return { url, number: Number(match[1]) };
+  return { url };
 }
