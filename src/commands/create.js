@@ -1,4 +1,4 @@
-import { runCodexTaskAutoExit } from "../lib/codex.js";
+import { runCodexTaskInteractive } from "../lib/codex.js";
 import { currentBranch } from "../lib/git.js";
 import { createIssue, issueBody, issueTitle } from "../lib/issues.js";
 import { createTaskRecord, makeTaskId, saveTask, specFile, taskDir } from "../lib/tasks.js";
@@ -44,7 +44,7 @@ export async function createTask(args) {
   const specPath = specFile(root, taskId);
   ensureDir(taskDir(root, taskId));
 
-  const result = await runCodexTaskAutoExit({
+  const result = runCodexTaskInteractive({
     repoRoot: root,
     prompt: buildCreatePrompt(intent, taskId, specPath),
   });

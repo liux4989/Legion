@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { runCommandInheritAsync } from "./shell.js";
+import { runCommandInheritAsync, runCommandInteractive } from "./shell.js";
 
 const LEGION_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const NOTIFY_HOOK = path.join(LEGION_ROOT, "bin", "legion-notify");
@@ -71,4 +71,16 @@ export async function runCodexTaskAutoExit({ repoRoot, prompt }) {
   return runCodexAutoExit(repoRoot, prompt);
 }
 
+export function runCodexTaskInteractive({ repoRoot, prompt }) {
+  const result = runCommandInteractive("codex", buildInteractiveArgs(prompt), {
+    cwd: repoRoot,
+    allowFailure: true,
+  });
+
+  if (result.status !== 0) {
+    return { ok: false, error: `Codex exited with code ${result.status}` };
+  }
+
+  return { ok: true };
+}
 
