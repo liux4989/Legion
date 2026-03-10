@@ -6,8 +6,9 @@ task:
 spec:
   path:
     {{spec_path}}
+  structure: "The spec contains user stories, each with acceptance criteria (EARS format) and edge cases. Both must be implemented."
 instructions:
-  - "Implement the spec."
+  - "Implement the spec. Cover every acceptance criterion and every edge case — do not skip edge cases."
   - "Append exactly one JSON line matching output.json_line_schema to output.trajectory_file when the task is complete."
 scope:
   rule: "Do not broaden scope beyond the spec."
@@ -16,4 +17,4 @@ output:
     {{trajectory_file}}
   append_mode: true
   json_line_schema: |-
-    {"iteration":{{iteration}},"phase":"execute","summary":"<one paragraph>"}
+    {"iteration":{{iteration}},"phase":"execute","summary":"<natural description of what was changed and why>","covered":["<each AC or edge case item implemented>"]}
