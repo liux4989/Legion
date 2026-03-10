@@ -38,7 +38,7 @@ Create a task:
 legion create "Fix race condition in session cleanup"
 ```
 
-`create` runs one inline Codex pass with a staged HIL workflow: structural intent draft and approval first, then spec draft and approval, then final markdown output.
+`create` runs one inline Codex session with a staged HIL workflow: stage 1 output only, auto-advances to stage 2 after explicit approval, and writes the final markdown file only after the final approval.
 
 Run the autonomous execute→review→fix loop:
 

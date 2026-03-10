@@ -1,6 +1,14 @@
 objective: "Turn the user request into an executable markdown spec."
 intent:
   {{intent}}
+rules:
+  - "Run the workflow inside the current create session."
+  - "Start at stage_1."
+  - "After explicit human approval for the current stage, immediately continue to the next stage without asking for permission to proceed."
+  - "Do not proceed to the next stage without explicit human approval."
+  - "Output only the format for the active stage."
+  - "Do not write output.final_output_file until stage_2 is explicitly approved."
+  - "After writing output.final_output_file, reply with a short confirmation that includes the final path and stop."
 workflow:
   stage_1:
     goal: "Turn the intent into well-defined user behaviors aligned to the user intent."
