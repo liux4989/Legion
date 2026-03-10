@@ -73,4 +73,4 @@ tasks/
 - Review findings are fed back to codex as fix instructions on the next iteration.
 - `pr` creates a commit if the task branch still has local changes, then pushes and creates or updates a PR with `gh`.
 - The task spec is stored in `spec.md` and also copied into `task.json`; the PR body inlines the spec for reviewers.
-- Set `LEGION_CODEX_ARGS` if you need to append extra flags to Codex commands, for example `LEGION_CODEX_ARGS='-m o3'`.
+- All prompt content lives in `src/prompts/*.yaml`; application code only passes runtime values and validates outputs.

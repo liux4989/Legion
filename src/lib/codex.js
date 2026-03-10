@@ -12,11 +12,7 @@ function tmpFile(prefix, extension) {
 }
 
 function buildInteractiveArgs(prompt) {
-  const extraArgs = process.env.LEGION_CODEX_ARGS?.trim()
-    ? process.env.LEGION_CODEX_ARGS.trim().split(/\s+/)
-    : [];
-
-  return ["--no-alt-screen", "-c", `notify=[${JSON.stringify(NOTIFY_HOOK)}]`, ...extraArgs, prompt];
+  return ["--no-alt-screen", "-c", `notify=[${JSON.stringify(NOTIFY_HOOK)}]`, prompt];
 }
 
 const CODEX_TURN_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
@@ -72,16 +68,7 @@ async function runCodexAutoExit(repoRoot, prompt) {
 }
 
 export async function runCodexTaskAutoExit({ repoRoot, prompt }) {
-  const result = await runCodexAutoExit(repoRoot, prompt);
-
-  if (!result.ok) {
-    return result;
-  }
-
-  return {
-    ok: true,
-    summary: "Completed via inline Codex session. Review the working tree for implementation details.",
-  };
+  return runCodexAutoExit(repoRoot, prompt);
 }
 
 
