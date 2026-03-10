@@ -20,7 +20,6 @@ output:
     sections:
       behaviors: "Well-defined user behaviors aligned to the user intent. Keep them minimal and do not expand beyond what the user asked."
       goal: "Assumption about why this feature or fix exists."
-      reason: "Assumption about root cause or motivation."
       nonGoals: "Assumptions the human did not address but are reasonable to consider."
   stage_2_format:
     title: "<short title>"
