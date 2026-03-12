@@ -1,5 +1,6 @@
 import { runCommand } from "./shell.js";
 import { CliError } from "./errors.js";
+import { runCodexOneshot } from "./codex.js";
 
 export function repoRoot(cwd = process.cwd()) {
   return runCommand("git", ["rev-parse", "--show-toplevel"], { cwd }).stdout.trim();
@@ -10,11 +11,14 @@ export function currentBranch(cwd) {
 }
 
 export function ensureWorkingTreeSafe(cwd) {
-  const status = runCommand("git", ["status", "--porcelain"], { cwd }).stdout.trim();
+  if (!workingTreeHasChanges(cwd)) return;
 
-  if (status) {
-    throw new CliError("Working tree is dirty. Commit, stash, or clean changes before switching task branches.");
-  }
+  const diff = gitDiff(cwd);
+  const prompt = `You are a commit message generator. Given the following git diff, write a concise conventional commit message (type(scope): description). Output ONLY the commit message, nothing else.\n\n${diff}`;
+
+  console.log("Dirty worktree detected. Auto-committing with Codex-generated message...");
+  const message = runCodexOneshot({ repoRoot: cwd, prompt });
+  commitAll(cwd, message);
 }
 
 export function branchExists(cwd, branchName) {
@@ -65,10 +69,30 @@ export function commitAll(cwd, message) {
   }
 }
 
+export function commitPaths(cwd, paths, message) {
+  for (const p of paths) {
+    runCommand("git", ["add", p], { cwd });
+  }
+  const commit = runCommand("git", ["commit", "-m", message], { cwd, allowFailure: true });
+
+  if (commit.status !== 0 && !commit.stdout.includes("nothing to commit")) {
+    const details = commit.stderr.trim() || commit.stdout.trim();
+    throw new CliError(`Unable to create commit: ${details}`);
+  }
+}
+
 export function taskCommitMessage(task, phase) {
   return `task(${task.id}/${phase}): ${task.intent}`;
 }
 
+export function gitDiff(cwd) {
+  const staged = runCommand("git", ["diff", "--cached"], { cwd }).stdout.trim();
+  const unstaged = runCommand("git", ["diff"], { cwd }).stdout.trim();
+  const untracked = runCommand("git", ["ls-files", "--others", "--exclude-standard"], { cwd }).stdout.trim();
+  const parts = [staged, unstaged].filter(Boolean);
+  if (untracked) parts.push(`Untracked files:\n${untracked}`);
+  return parts.join("\n");
+}
 
 export function remoteName(cwd) {
   const remotes = runCommand("git", ["remote"], { cwd }).stdout.trim().split(/\s+/).filter(Boolean);

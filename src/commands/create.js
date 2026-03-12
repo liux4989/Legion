@@ -1,5 +1,5 @@
 import { runCodexTaskInteractive } from "../lib/codex.js";
-import { commitAll, currentBranch, taskCommitMessage, workingTreeHasChanges } from "../lib/git.js";
+import { commitPaths, currentBranch, taskCommitMessage } from "../lib/git.js";
 import { createTaskRecord, makeTaskId, specFile, taskDir } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
 import { resolveProjectContext } from "../lib/projects.js";
@@ -80,9 +80,7 @@ export async function createTask(args) {
 
   createTaskRecord(root, { id: taskId, task });
 
-  if (workingTreeHasChanges(root)) {
-    commitAll(root, taskCommitMessage(task, "create"));
-  }
+  commitPaths(root, [taskDir(root, taskId)], taskCommitMessage(task, "create"));
 
   enqueueIssueCreation(root, taskId);
 
