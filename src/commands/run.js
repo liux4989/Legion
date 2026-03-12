@@ -5,6 +5,7 @@ import { runCodexTaskSession } from "../lib/codex.js";
 import { CliError } from "../lib/errors.js";
 import { renderPromptTemplate } from "../lib/prompt-template.js";
 import { resolveProjectContext } from "../lib/projects.js";
+import { finalizeTaskPr } from "./pr.js";
 
 const MAX_ITERATIONS = 3;
 
@@ -222,7 +223,7 @@ export async function runTask(args) {
     }
 
     if (task.state === "pr_ready") {
-      console.log(`Task ${task.id} is ready for PR. Run: legion pr ${task.id}`);
+      await finalizeTaskPr(task.id);
       return;
     }
   }

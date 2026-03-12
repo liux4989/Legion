@@ -7,7 +7,7 @@ Legion is a minimal prototype orchestrator for coding tasks. It implements a `Sp
 - Harness: `codex` CLI only
 - Isolation: git branches
 - Spec creation: one inline Codex task that writes the final markdown spec
-- PR creation: explicit `pr` command after review passes
+- PR creation: automatic after review passes
 - Phase boundary: a phase ends when the codex subprocess exits, then Legion validates the expected trajectory entry
 
 ## Requirements
@@ -47,12 +47,6 @@ legion run <task-id>
 
 `run` launches codex inline with `--full-auto`. A phase continues until the codex subprocess exits, then Legion validates the expected trajectory entry and advances to the next phase. The loop runs up to 3 iterations (execute → review → fix → review → …) until review passes. Press Ctrl-C at any time to stop.
 
-Open or update a PR:
-
-```bash
-legion pr <task-id>
-```
-
 ## Task Layout
 
 Runtime state is stored under `tasks/` and kept out of git:
@@ -72,6 +66,6 @@ Task IDs are Legion-generated short random IDs such as `t_8f3k2m`. They are not 
 - `run` launches codex with `--full-auto` and auto-advances through execute→review→fix phases without manual intervention.
 - The user can interact with codex during execution (it runs inline with `stdio: "inherit"`). Ctrl-C aborts the loop.
 - Review findings are fed back to codex as fix instructions on the next iteration.
-- `pr` creates a commit if the task branch still has local changes, then pushes and creates or updates a PR with `gh`.
+- After review passes, `run` creates a commit if the task branch still has local changes, then pushes and creates or updates a PR with `gh`.
 - The task spec is stored in `spec.md` and also copied into `task.json`; the PR body inlines the spec for reviewers.
 - All prompt content lives in `src/prompts/*.yaml`; the YAML template is the final prompt structure, and application code only binds runtime values and validates outputs.

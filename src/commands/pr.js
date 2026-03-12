@@ -5,11 +5,9 @@ import { assertTaskState, recordError, clearError, prBody, prTitle } from "../li
 import { CliError } from "../lib/errors.js";
 import { resolveProjectContext } from "../lib/projects.js";
 
-export async function prTask(args) {
-  const taskId = args[0];
-
+export async function finalizeTaskPr(taskId) {
   if (!taskId) {
-    throw new CliError("Usage: legion pr <task-id>");
+    throw new CliError("Task ID is required.");
   }
 
   const project = resolveProjectContext();

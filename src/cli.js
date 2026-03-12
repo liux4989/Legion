@@ -1,6 +1,5 @@
 import { createTask } from "./commands/create.js";
 import { runTask } from "./commands/run.js";
-import { prTask } from "./commands/pr.js";
 import { CliError, formatError } from "./lib/errors.js";
 
 function usage() {
@@ -8,7 +7,6 @@ function usage() {
     "Usage:",
     '  legion create "<intent>"',
     "  legion run <task-id>",
-    "  legion pr <task-id>",
   ].join("\n");
 }
 
@@ -21,8 +19,6 @@ export async function main(argv) {
         return await createTask(rest);
       case "run":
         return await runTask(rest);
-      case "pr":
-        return await prTask(rest);
       case "--help":
       case "-h":
       case undefined:
