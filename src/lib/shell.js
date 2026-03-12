@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { spawn } from "node:child_process";
+import { openSync } from "node:fs";
 import { CliError } from "./errors.js";
 
 export function runCommand(command, args, options = {}) {
@@ -135,11 +136,19 @@ export function runCommandInheritAsync(command, args, options = {}) {
 }
 
 export function spawnDetached(command, args, options = {}) {
+  const { logFile, ...spawnOpts } = options;
+  let stdio = "ignore";
+
+  if (logFile) {
+    const fd = openSync(logFile, "a");
+    stdio = ["ignore", fd, fd];
+  }
+
   const child = spawn(command, args, {
-    cwd: options.cwd,
-    env: { ...process.env, ...options.env },
+    cwd: spawnOpts.cwd,
+    env: { ...process.env, ...spawnOpts.env },
     detached: true,
-    stdio: "ignore",
+    stdio,
   });
 
   child.on("error", () => {});
