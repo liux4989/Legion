@@ -8,8 +8,7 @@ Legion is a minimal prototype orchestrator for coding tasks. It implements a `Sp
 - Isolation: git branches
 - Spec creation: one inline Codex task that writes the final markdown spec
 - PR creation: explicit `pr` command after review passes
-- Auto-exit: passes a codex `notify` hook at launch time to detect turn completion and auto-advance phases
-- Auto-exit: passes a codex `notify` hook at launch time to detect turn completion and auto-advance phases
+- Phase boundary: a phase ends when the codex subprocess exits, then Legion validates the expected trajectory entry
 
 ## Requirements
 
@@ -46,7 +45,7 @@ Run the autonomous execute→review→fix loop:
 legion run <task-id>
 ```
 
-`run` launches codex inline with `--full-auto`. When codex finishes a turn, the notify hook signals completion and Legion auto-advances to the next phase. The loop runs up to 3 iterations (execute → review → fix → review → …) until review passes. Press Ctrl-C at any time to stop.
+`run` launches codex inline with `--full-auto`. A phase continues until the codex subprocess exits, then Legion validates the expected trajectory entry and advances to the next phase. The loop runs up to 3 iterations (execute → review → fix → review → …) until review passes. Press Ctrl-C at any time to stop.
 
 Open or update a PR:
 

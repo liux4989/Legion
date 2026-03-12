@@ -1,7 +1,7 @@
 import { effectiveTaskState, loadTask, saveTask, specFile, latestTrajectoryEntry, readTrajectory, trajectoryFile } from "../lib/tasks.js";
 import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js";
 import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, hasUnpushedCommits, pushUnpushedCommits, resolveStartSha, taskCommitMessage, workingTreeHasChanges } from "../lib/git.js";
-import { runCodexTaskAutoExit } from "../lib/codex.js";
+import { runCodexTaskSession } from "../lib/codex.js";
 import { CliError } from "../lib/errors.js";
 import { renderPromptTemplate } from "../lib/prompt-template.js";
 import { resolveProjectContext } from "../lib/projects.js";
@@ -61,7 +61,7 @@ async function executePhase(root, task) {
   task.lastError = null;
   saveTask(root, task);
 
-  const result = await runCodexTaskAutoExit({
+  const result = await runCodexTaskSession({
     repoRoot: root,
     prompt: buildExecutePrompt(root, task),
   });
@@ -91,7 +91,7 @@ async function fixPhase(root, task, iteration) {
   task.lastError = null;
   saveTask(root, task);
 
-  const result = await runCodexTaskAutoExit({
+  const result = await runCodexTaskSession({
     repoRoot: root,
     prompt: buildFixPrompt(root, task, iteration),
   });
@@ -129,7 +129,7 @@ async function reviewPhase(root, task, iteration) {
     return false;
   }
 
-  const result = await runCodexTaskAutoExit({
+  const result = await runCodexTaskSession({
     repoRoot: root,
     prompt: buildReviewPrompt(root, task, iteration),
   });
