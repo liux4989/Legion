@@ -1,5 +1,5 @@
 import { runCodexTaskInteractive } from "../lib/codex.js";
-import { commitPaths, currentBranch, taskCommitMessage } from "../lib/git.js";
+import { commitPaths, currentBranch, defaultBranch, taskCommitMessage } from "../lib/git.js";
 import { createTaskRecord, makeTaskId, specFile, taskDir } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
 import { resolveProjectContext } from "../lib/projects.js";
@@ -46,7 +46,13 @@ export async function createTask(args) {
 
   const project = resolveProjectContext();
   const root = project.root;
-  const baseBranch = currentBranch(root) || "main";
+  const activeBranch = currentBranch(root);
+
+  if (!activeBranch) {
+    throw new CliError("Cannot create a task from a detached HEAD.");
+  }
+
+  const baseBranch = activeBranch.startsWith("task/") ? defaultBranch(root) : activeBranch;
   const now = new Date().toISOString();
   const taskId = makeTaskId(root);
 

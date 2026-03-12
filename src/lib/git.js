@@ -29,6 +29,50 @@ export function branchExists(cwd, branchName) {
   return result.status === 0;
 }
 
+export function defaultBranch(cwd) {
+  const remote = remoteName(cwd);
+
+  if (!remote) {
+    throw new CliError("No git remote configured.");
+  }
+
+  const headRef = runCommand("git", ["symbolic-ref", "--quiet", "--short", `refs/remotes/${remote}/HEAD`], {
+    cwd,
+    allowFailure: true,
+  });
+
+  if (headRef.status !== 0) {
+    throw new CliError(`Unable to determine the default branch from ${remote}/HEAD.`);
+  }
+
+  const prefix = `${remote}/`;
+  const branchName = headRef.stdout.trim();
+
+  if (!branchName.startsWith(prefix)) {
+    throw new CliError(`Unable to parse default branch from ${remote}/HEAD.`);
+  }
+
+  return branchName.slice(prefix.length);
+}
+
+export function resolveBaseBranch(cwd, branchName) {
+  if (!branchName) {
+    throw new CliError("Task base branch is missing.");
+  }
+
+  if (!branchName.startsWith("task/")) {
+    return branchName;
+  }
+
+  const baseBranch = defaultBranch(cwd);
+
+  if (baseBranch.startsWith("task/")) {
+    throw new CliError(`Resolved default branch ${baseBranch} is invalid.`);
+  }
+
+  return baseBranch;
+}
+
 export function checkoutBranch(cwd, branchName, baseBranch) {
   if (branchExists(cwd, branchName)) {
     runCommand("git", ["checkout", branchName], { cwd });
