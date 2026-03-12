@@ -8,10 +8,9 @@ import { resolveProjectContext } from "../lib/projects.js";
 
 const MAX_ITERATIONS = 3;
 
-function buildExecutePrompt(root, task, iteration) {
+function buildExecutePrompt(root, task) {
   return renderPromptTemplate("execute-task.yaml", {
     task_id: task.id,
-    iteration,
     spec_path: specFile(root, task.id),
     trajectory_file: trajectoryFile(root, task.id),
   });
@@ -49,7 +48,7 @@ async function executePhase(root, task, iteration) {
 
   const result = await runCodexTaskAutoExit({
     repoRoot: root,
-    prompt: buildExecutePrompt(root, task, iteration),
+    prompt: buildExecutePrompt(root, task),
   });
 
   if (!result.ok) {
@@ -62,7 +61,7 @@ async function executePhase(root, task, iteration) {
   }
 
   const execution = latestTrajectoryEntry(root, task.id, "execute");
-  if (!execution || execution.iteration !== iteration) {
+  if (!execution) {
     recordError(root, task, "Codex did not append an execute entry to the trajectory file.");
     return false;
   }
