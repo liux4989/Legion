@@ -104,3 +104,12 @@ export function latestTrajectoryEntry(repoRoot, taskId, phase) {
   }
   return null;
 }
+
+export function effectiveTaskState(repoRoot, task) {
+  if (task.state !== "reviewing") {
+    return task.state;
+  }
+
+  const review = latestTrajectoryEntry(repoRoot, task.id, "review");
+  return review?.decision === "pass" ? "pr_ready" : task.state;
+}

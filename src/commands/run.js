@@ -1,4 +1,4 @@
-import { loadTask, saveTask, specFile, latestTrajectoryEntry, readTrajectory, trajectoryFile } from "../lib/tasks.js";
+import { effectiveTaskState, loadTask, saveTask, specFile, latestTrajectoryEntry, readTrajectory, trajectoryFile } from "../lib/tasks.js";
 import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js";
 import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, hasUnpushedCommits, pushUnpushedCommits, resolveStartSha, taskCommitMessage, workingTreeHasChanges } from "../lib/git.js";
 import { runCodexTaskAutoExit } from "../lib/codex.js";
@@ -159,7 +159,6 @@ async function reviewPhase(root, task, iteration) {
   if (review.decision === "pass") {
     transitionTask(task, "review_passed");
     task.lastError = null;
-    saveTask(root, task);
     console.log(`\n── review passed ── state: pr_ready`);
     return true;
   }
@@ -182,7 +181,8 @@ export async function runTask(args) {
   const root = project.root;
 
   let task = loadTask(root, taskId);
-  assertTaskState(task, ["ready", "fixing", "reviewing"], "run");
+  task.state = effectiveTaskState(root, task);
+  assertTaskState(task, ["ready", "fixing", "reviewing", "pr_ready"], "run");
 
   if (hasUnpushedCommits(root, task.baseBranch)) {
     pushUnpushedCommits(root, task.baseBranch);
@@ -199,22 +199,26 @@ export async function runTask(args) {
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     task = loadTask(root, taskId);
+    task.state = effectiveTaskState(root, task);
 
     if (task.state === "ready") {
       if (!await executePhase(root, task)) break;
       task = loadTask(root, taskId);
+      task.state = effectiveTaskState(root, task);
     }
 
     if (task.state === "fixing") {
       const fixIteration = nextPhaseIteration(root, task.id, "fix");
       if (!await fixPhase(root, task, fixIteration)) break;
       task = loadTask(root, taskId);
+      task.state = effectiveTaskState(root, task);
     }
 
     if (task.state === "reviewing") {
       const reviewIteration = nextPhaseIteration(root, task.id, "review");
       if (!await reviewPhase(root, task, reviewIteration)) break;
       task = loadTask(root, taskId);
+      task.state = effectiveTaskState(root, task);
     }
 
     if (task.state === "pr_ready") {
@@ -224,6 +228,7 @@ export async function runTask(args) {
   }
 
   task = loadTask(root, taskId);
+  task.state = effectiveTaskState(root, task);
   if (task.state !== "pr_ready") {
     console.log(`Loop ended. Task ${task.id} state: ${task.state}`);
   }

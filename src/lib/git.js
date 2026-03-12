@@ -2,16 +2,6 @@ import { runCommand } from "./shell.js";
 import { CliError } from "./errors.js";
 import { runCodexOneshot } from "./codex.js";
 
-const LEGION_RUNTIME_PATHS = [
-  ":(exclude)tasks/**/task.json",
-  ":(exclude)tasks/**/trajectory.jsonl",
-  ":(exclude)tasks/**/issue.log",
-];
-
-function stageAllExceptRuntime(cwd) {
-  runCommand("git", ["add", "-A", "--", ".", ...LEGION_RUNTIME_PATHS], { cwd });
-}
-
 export function repoRoot(cwd = process.cwd()) {
   return runCommand("git", ["rev-parse", "--show-toplevel"], { cwd }).stdout.trim();
 }
@@ -110,11 +100,11 @@ export function hasDiffAgainst(cwd, baseBranch) {
 }
 
 export function workingTreeHasChanges(cwd) {
-  return Boolean(runCommand("git", ["status", "--porcelain", "--", ".", ...LEGION_RUNTIME_PATHS], { cwd }).stdout.trim());
+  return Boolean(runCommand("git", ["status", "--porcelain"], { cwd }).stdout.trim());
 }
 
 export function commitAll(cwd, message) {
-  stageAllExceptRuntime(cwd);
+  runCommand("git", ["add", "-A"], { cwd });
   const commit = runCommand("git", ["commit", "-m", message], { cwd, allowFailure: true });
 
   if (commit.status !== 0 && !commit.stdout.includes("nothing to commit")) {

@@ -1,6 +1,6 @@
 import { createOrUpdatePr } from "../lib/pr.js";
 import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, pushBranch, remoteName, resolveBaseBranch, taskCommitMessage, workingTreeHasChanges } from "../lib/git.js";
-import { loadTask, saveTask } from "../lib/tasks.js";
+import { effectiveTaskState, loadTask, saveTask } from "../lib/tasks.js";
 import { assertTaskState, recordError, clearError, prBody, prTitle } from "../lib/workflow.js";
 import { CliError } from "../lib/errors.js";
 import { resolveProjectContext } from "../lib/projects.js";
@@ -16,6 +16,7 @@ export async function prTask(args) {
   const root = project.root;
 
   const task = loadTask(root, taskId);
+  task.state = effectiveTaskState(root, task);
   const baseBranch = resolveBaseBranch(root, task.baseBranch);
 
   if (baseBranch !== task.baseBranch) {

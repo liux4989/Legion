@@ -1,12 +1,49 @@
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { runCodexTaskInteractive } from "../lib/codex.js";
-import { commitAll, commitPaths, currentBranch, defaultBranch, taskCommitMessage, workingTreeHasChanges } from "../lib/git.js";
-import { createTaskRecord, makeTaskId, saveTask, specFile, taskDir } from "../lib/tasks.js";
+import { commitPaths, currentBranch, defaultBranch, taskCommitMessage } from "../lib/git.js";
+import { createTaskRecord, makeTaskId, specFile, taskDir } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
 import { resolveProjectContext } from "../lib/projects.js";
 import { buildCreatePrompt } from "../lib/spec.js";
 import { ensureDir } from "../lib/fs.js";
-import { createIssue, issueBody, issueTitle } from "../lib/issues.js";
+import { spawnDetached } from "../lib/shell.js";
 import { runTask } from "./run.js";
+
+const LEGION_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const TASKS_MODULE_URL = JSON.stringify(pathToFileURL(path.join(LEGION_ROOT, "src/lib/tasks.js")).href);
+const ISSUES_MODULE_URL = JSON.stringify(pathToFileURL(path.join(LEGION_ROOT, "src/lib/issues.js")).href);
+const ERRORS_MODULE_URL = JSON.stringify(pathToFileURL(path.join(LEGION_ROOT, "src/lib/errors.js")).href);
+
+function enqueueIssueCreation(repoRoot, taskId) {
+  const workerScript = [
+    "const repoRoot = process.argv[1];",
+    "const taskId = process.argv[2];",
+    `const { loadTask, saveTask } = await import(${TASKS_MODULE_URL});`,
+    `const { createIssue, issueBody, issueTitle } = await import(${ISSUES_MODULE_URL});`,
+    `const { formatError } = await import(${ERRORS_MODULE_URL});`,
+    "const task = loadTask(repoRoot, taskId);",
+    "try {",
+    "  const issue = createIssue({",
+    "    cwd: repoRoot,",
+    "    title: issueTitle(task),",
+    "    body: issueBody(repoRoot, task),",
+    "  });",
+    "  task.issueUrl = issue.url;",
+    "  task.issueError = null;",
+    "  saveTask(repoRoot, task);",
+    "} catch (error) {",
+    "  task.issueError = formatError(error);",
+    "  saveTask(repoRoot, task);",
+    "  throw error;",
+    "}",
+  ].join("\n");
+
+  spawnDetached(process.execPath, ["--input-type=module", "-e", workerScript, repoRoot, taskId], {
+    cwd: repoRoot,
+    logFile: path.join(taskDir(repoRoot, taskId), "issue.log"),
+  });
+}
 
 export async function createTask(args) {
   const intent = args.join(" ").trim();
@@ -56,28 +93,15 @@ export async function createTask(args) {
   }
 
   createTaskRecord(root, { id: taskId, task });
-
-  if (workingTreeHasChanges(root)) {
-    commitAll(root, "legion: auto-commit dirty worktree before task creation");
-  }
-
-  commitPaths(root, [specPath], taskCommitMessage(task, "create"));
-
-  const issue = createIssue({
-    cwd: root,
-    title: issueTitle(task),
-    body: issueBody(root, task),
-  });
-  task.issueUrl = issue.url;
-  task.issueError = null;
-  saveTask(root, task);
+  commitPaths(root, [taskDir(root, taskId)], taskCommitMessage(task, "create"));
+  enqueueIssueCreation(root, taskId);
 
   console.log(`Project: ${project.name} (${project.path})`);
   console.log(`Created task ${taskId}`);
   console.log(`State: ready`);
   console.log(`Branch: ${branchName}`);
   console.log(`Spec: tasks/task_${taskId}/spec.md`);
-  console.log(`Issue: ${task.issueUrl}`);
+  console.log(`Issue: pending`);
   console.log(`Task: tasks/task_${taskId}/task.json`);
 
   await runTask([taskId]);
