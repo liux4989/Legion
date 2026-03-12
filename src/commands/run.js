@@ -1,4 +1,4 @@
-import { loadTask, saveTask, specFile, latestTrajectoryEntry, trajectoryFile } from "../lib/tasks.js";
+import { loadTask, saveTask, specFile, latestTrajectoryEntry, readTrajectory, trajectoryFile } from "../lib/tasks.js";
 import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js";
 import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, hasUnpushedCommits, pushUnpushedCommits, resolveStartSha, taskCommitMessage, workingTreeHasChanges } from "../lib/git.js";
 import { runCodexTaskAutoExit } from "../lib/codex.js";
@@ -18,6 +18,10 @@ function assertTrajectoryIteration(entry, expectedIteration, phase) {
   if (actualIteration !== expectedIteration) {
     throw new CliError(`Unexpected ${phase} iteration: expected ${expectedIteration}, got ${entry.iteration}`);
   }
+}
+
+function nextPhaseIteration(root, taskId, phase) {
+  return readTrajectory(root, taskId).filter((entry) => entry.phase === phase).length + 1;
 }
 
 function buildExecutePrompt(root, task) {
@@ -202,12 +206,14 @@ export async function runTask(args) {
     }
 
     if (task.state === "fixing") {
-      if (!await fixPhase(root, task, i + 1)) break;
+      const fixIteration = nextPhaseIteration(root, task.id, "fix");
+      if (!await fixPhase(root, task, fixIteration)) break;
       task = loadTask(root, taskId);
     }
 
     if (task.state === "reviewing") {
-      if (!await reviewPhase(root, task, i + 1)) break;
+      const reviewIteration = nextPhaseIteration(root, task.id, "review");
+      if (!await reviewPhase(root, task, reviewIteration)) break;
       task = loadTask(root, taskId);
     }
 
