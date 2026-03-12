@@ -5,7 +5,7 @@ import { readText } from "./fs.js";
 
 const TASK_TRANSITIONS = {
   ready: {
-    start_fixing: "fixing",
+    execute_succeeded: "reviewing",
   },
   fixing: {
     fixing_succeeded: "reviewing",

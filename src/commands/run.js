@@ -42,7 +42,6 @@ function buildReviewPrompt(root, task, iteration) {
 }
 
 async function executePhase(root, task) {
-  transitionTask(task, "start_fixing");
   task.lastError = null;
   saveTask(root, task);
 
@@ -65,7 +64,7 @@ async function executePhase(root, task) {
     recordError(root, task, "Codex did not append an execute entry to the trajectory file.");
     return false;
   }
-  transitionTask(task, "fixing_succeeded");
+  transitionTask(task, "execute_succeeded");
   task.lastError = null;
   saveTask(root, task);
   console.log(`\n── execute done ── state: reviewing`);
