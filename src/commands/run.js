@@ -1,6 +1,6 @@
 import { loadTask, saveTask, specFile, latestTrajectoryEntry, trajectoryFile } from "../lib/tasks.js";
 import { assertTaskState, recordError, transitionTask } from "../lib/workflow.js";
-import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, hasUnpushedCommits, pushUnpushedCommits, resolveStartSha, workingTreeHasChanges } from "../lib/git.js";
+import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, hasDiffAgainst, hasUnpushedCommits, pushUnpushedCommits, resolveStartSha, taskCommitMessage, workingTreeHasChanges } from "../lib/git.js";
 import { runCodexTaskAutoExit } from "../lib/codex.js";
 import { CliError } from "../lib/errors.js";
 import { renderPromptTemplate } from "../lib/prompt-template.js";
@@ -58,7 +58,7 @@ async function executePhase(root, task, iteration) {
   }
 
   if (workingTreeHasChanges(root)) {
-    commitAll(root, `task(${task.id}): ${task.intent}`);
+    commitAll(root, taskCommitMessage(task, "execute"));
   }
 
   const execution = latestTrajectoryEntry(root, task.id, "execute");
@@ -88,7 +88,7 @@ async function fixPhase(root, task, iteration) {
   }
 
   if (workingTreeHasChanges(root)) {
-    commitAll(root, `task(${task.id}): ${task.intent}`);
+    commitAll(root, taskCommitMessage(task, "fix"));
   }
 
   const fixEntry = latestTrajectoryEntry(root, task.id, "fix");

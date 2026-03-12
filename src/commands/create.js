@@ -1,11 +1,12 @@
 import { runCodexTaskInteractive } from "../lib/codex.js";
-import { currentBranch } from "../lib/git.js";
+import { commitAll, currentBranch, taskCommitMessage, workingTreeHasChanges } from "../lib/git.js";
 import { createTaskRecord, makeTaskId, specFile, taskDir } from "../lib/tasks.js";
 import { CliError } from "../lib/errors.js";
 import { resolveProjectContext } from "../lib/projects.js";
 import { buildCreatePrompt } from "../lib/spec.js";
 import { ensureDir } from "../lib/fs.js";
 import { spawnDetached } from "../lib/shell.js";
+import { runTask } from "./run.js";
 
 function enqueueIssueCreation(repoRoot, taskId) {
   const workerScript = [
@@ -78,6 +79,11 @@ export async function createTask(args) {
   }
 
   createTaskRecord(root, { id: taskId, task });
+
+  if (workingTreeHasChanges(root)) {
+    commitAll(root, taskCommitMessage(task, "create"));
+  }
+
   enqueueIssueCreation(root, taskId);
 
   console.log(`Project: ${project.name} (${project.path})`);
@@ -87,4 +93,6 @@ export async function createTask(args) {
   console.log(`Spec: tasks/task_${taskId}/spec.md`);
   console.log(`Issue: pending`);
   console.log(`Task: tasks/task_${taskId}/task.json`);
+
+  await runTask([taskId]);
 }

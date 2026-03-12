@@ -65,6 +65,11 @@ export function commitAll(cwd, message) {
   }
 }
 
+export function taskCommitMessage(task, phase) {
+  return `task(${task.id}/${phase}): ${task.intent}`;
+}
+
+
 export function remoteName(cwd) {
   const remotes = runCommand("git", ["remote"], { cwd }).stdout.trim().split(/\s+/).filter(Boolean);
   return remotes.includes("origin") ? "origin" : remotes[0] ?? null;

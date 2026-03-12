@@ -1,5 +1,5 @@
 import { createOrUpdatePr } from "../lib/pr.js";
-import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, pushBranch, remoteName, workingTreeHasChanges } from "../lib/git.js";
+import { checkoutBranch, commitAll, currentBranch, ensureWorkingTreeSafe, pushBranch, remoteName, taskCommitMessage, workingTreeHasChanges } from "../lib/git.js";
 import { loadTask, saveTask } from "../lib/tasks.js";
 import { assertTaskState, recordError, clearError, prBody, prTitle } from "../lib/workflow.js";
 import { CliError } from "../lib/errors.js";
@@ -28,7 +28,7 @@ export async function prTask(args) {
     console.log(`Project: ${project.name} (${project.path})`);
 
     if (workingTreeHasChanges(root)) {
-      commitAll(root, `task(${task.id}): ${task.intent}`);
+      commitAll(root, taskCommitMessage(task, "pr"));
     }
 
     const remote = remoteName(root);
