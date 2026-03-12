@@ -72,21 +72,16 @@ export async function runCodexTaskAutoExit({ repoRoot, prompt }) {
 }
 
 export function runCodexOneshot({ repoRoot, prompt }) {
-  const outFile = tmpFile("legion-oneshot", "txt");
-  try {
-    const result = runCommand("codex", ["exec", "--full-auto", "-o", outFile, prompt], {
-      cwd: repoRoot,
-      allowFailure: true,
-    });
+  const result = runCommand("codex", ["exec", "--full-auto", prompt], {
+    cwd: repoRoot,
+    allowFailure: true,
+  });
 
-    if (result.status !== 0) {
-      throw new Error(`Codex exited with code ${result.status}: ${result.stderr.trim()}`);
-    }
-
-    return fs.readFileSync(outFile, "utf8").trim();
-  } finally {
-    fs.rmSync(outFile, { force: true });
+  if (result.status !== 0) {
+    throw new Error(`Codex exited with code ${result.status}: ${result.stderr.trim()}`);
   }
+
+  return result.stdout.trim();
 }
 
 export function runCodexTaskInteractive({ repoRoot, prompt }) {
