@@ -41,7 +41,7 @@ function buildReviewPrompt(root, task, iteration) {
   });
 }
 
-async function executePhase(root, task, iteration) {
+async function executePhase(root, task) {
   transitionTask(task, "start_fixing");
   task.lastError = null;
   saveTask(root, task);
@@ -174,7 +174,7 @@ export async function runTask(args) {
     task = loadTask(root, taskId);
 
     if (task.state === "ready") {
-      if (!await executePhase(root, task, i + 1)) break;
+      if (!await executePhase(root, task)) break;
       task = loadTask(root, taskId);
     }
 
