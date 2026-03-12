@@ -8,6 +8,18 @@ import { resolveProjectContext } from "../lib/projects.js";
 
 const MAX_ITERATIONS = 3;
 
+function assertTrajectoryIteration(entry, expectedIteration, phase) {
+  const actualIteration = Number(entry?.iteration);
+
+  if (!Number.isInteger(actualIteration)) {
+    throw new CliError(`Invalid ${phase} iteration: ${entry?.iteration}`);
+  }
+
+  if (actualIteration !== expectedIteration) {
+    throw new CliError(`Unexpected ${phase} iteration: expected ${expectedIteration}, got ${entry.iteration}`);
+  }
+}
+
 function buildExecutePrompt(root, task) {
   return renderPromptTemplate("execute-task.yaml", {
     task_id: task.id,
@@ -90,8 +102,14 @@ async function fixPhase(root, task, iteration) {
   }
 
   const fixEntry = latestTrajectoryEntry(root, task.id, "fix");
-  if (!fixEntry || fixEntry.iteration !== iteration) {
+  if (!fixEntry) {
     recordError(root, task, "Codex did not append a fix entry to the trajectory file.");
+    return false;
+  }
+  try {
+    assertTrajectoryIteration(fixEntry, iteration, "fix");
+  } catch (error) {
+    recordError(root, task, error);
     return false;
   }
   transitionTask(task, "fixing_succeeded");
@@ -118,8 +136,14 @@ async function reviewPhase(root, task, iteration) {
   }
 
   const review = latestTrajectoryEntry(root, task.id, "review");
-  if (!review || review.iteration !== iteration) {
+  if (!review) {
     recordError(root, task, "Codex did not append a review entry to the trajectory file.");
+    return false;
+  }
+  try {
+    assertTrajectoryIteration(review, iteration, "review");
+  } catch (error) {
+    recordError(root, task, error);
     return false;
   }
 
@@ -139,7 +163,7 @@ async function reviewPhase(root, task, iteration) {
   transitionTask(task, "review_failed");
   task.lastError = null;
   saveTask(root, task);
-  console.log(`\n── review failed ── looping back to execute`);
+  console.log(`\n── review failed ── state: fixing`);
   return true;
 }
 
